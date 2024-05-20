@@ -30,24 +30,68 @@
             padding: 2em;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 80%;
+            max-width: 1200px;
         }
         .nav {
             margin-bottom: 1em;
         }
         .nav a {
-            color: white;
-            text-decoration: none;
+            color: white; /* Change the link color to white */
+            text-decoration: none; /* Remove the underline */
             margin: 0 1em;
             font-weight: bold;
         }
         .nav a:hover {
             text-decoration: underline;
         }
+        .return-link {
+            color: white; /* Change the link color to white */
+            text-decoration: none; /* Remove the underline */
+        }
         .content {
             display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
         }
         .content.active {
             display: block;
+            opacity: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1.2em;
+            min-width: 400px;
+            border: 1px solid #dddddd;
+        }
+        table thead tr {
+            background-color: #009879;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+        table th,
+        table td {
+            padding: 12px 15px;
+            border: 1px solid #dddddd;
+        }
+        table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        table tbody tr:nth-of-type(even) {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        table tbody tr:last-of-type {
+            border-bottom: 2px solid #009879;
+        }
+        table th.sortable:hover {
+            cursor: pointer;
+            background-color: #006f5d;
+        }
+        table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.2);
         }
     </style>
 </head>
@@ -60,25 +104,94 @@
             <a href="#" onclick="showContent('league'); return false;">백합마작리그</a>
         </div>
         <div id="default-content" class="content active">
-            <p>백합마작대회는 2020년부터, 마작을 좋아하는 백합러들끼리의 우정과 사랑을 다질 수 있는 친목대회로, 16명의 인원으로 시작하여 현재 수십명이 참가하는 정기대회로 정착되었습니다.</p>
+            <p>백합마작대회는 2020년부터, 마작을 좋아하는 백합러들끼리의 우정과 사랑을 다질 수 있는 친목대회입니다.<br>
+            16명의 인원으로 시작하여 현재 수십명이 참가하는 정기대회로 정착되었습니다.<br>
+            현재는 매년 개최되는 백합마작대회 단체전/개인전, 그리고 매월 개최되는 백합마작리그로 나눠집니다.</p>
         </div>
         <div id="team" class="content">
             <p>백합마작대회 단체전 내용입니다.</p>
+            <a href="#" class="return-link" onclick="showContent('default-content'); return false;">메인 페이지로 돌아가기</a>
+            <table id="teamTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" onclick="sortTable(0)">팀 이름</th>
+                        <th class="sortable" onclick="sortTable(1)">점수</th>
+                        <th class="sortable" onclick="sortTable(2)">순위</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>팀 A</td>
+                        <td>90</td>
+                        <td>1</td>
+                    </tr>
+                    <tr>
+                        <td>팀 B</td>
+                        <td>80</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td>팀 C</td>
+                        <td>85</td>
+                        <td>3</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <div id="individual" class="content">
             <p>백합마작대회 개인전 내용입니다.</p>
+            <a href="#" class="return-link" onclick="showContent('default-content'); return false;">메인 페이지로 돌아가기</a>
         </div>
         <div id="league" class="content">
             <p>백합마작리그 내용입니다.</p>
+            <a href="#" class="return-link" onclick="showContent('default-content'); return false;">메인 페이지로 돌아가기</a>
         </div>
     </div>
 
     <script>
         function showContent(id) {
             const contents = document.querySelectorAll('.content');
-            contents.forEach(content => content.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            contents.forEach(content => {
+                if (content.classList.contains('active')) {
+                    content.classList.remove('active');
+                    setTimeout(() => {
+                        content.style.display = 'none';
+                    }, 500); // Match this duration with the CSS transition duration
+                }
+            });
+
+            const targetContent = document.getElementById(id);
+            targetContent.style.display = 'block';
+            setTimeout(() => {
+                targetContent.classList.add('active');
+            }, 50); // Slight delay to allow display: block to take effect
         }
+
+        function sortTable(n) {
+            const table = document.getElementById('teamTable');
+            const tbody = table.tBodies[0];
+            const rows = Array.from(tbody.rows);
+            const isNumeric = !isNaN(rows[0].cells[n].innerText);
+
+            let sortOrder = 1; // Default to ascending order
+            if (table.sortColumn === n) {
+                sortOrder = -table.sortOrder; // Reverse the order if already sorted by this column
+            }
+            table.sortColumn = n;
+            table.sortOrder = sortOrder;
+
+            const sortedRows = rows.sort((a, b) => {
+                const aText = a.cells[n].innerText;
+                const bText = b.cells[n].innerText;
+                return isNumeric ? sortOrder * (aText - bText) : sortOrder * aText.localeCompare(bText);
+            });
+
+            sortedRows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Initialize sorting state
+        document.getElementById('teamTable').sortColumn = -1;
+        document.getElementById('teamTable').sortOrder = 1;
     </script>
 </body>
 </html>
