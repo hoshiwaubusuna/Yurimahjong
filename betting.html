@@ -149,7 +149,7 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
 .rh-qf{background:var(--surface3);color:var(--muted);}
 .rcard select{border:none;border-top:1px solid var(--border);border-radius:0;font-size:12px;background:#fff;}
 
-.btn-backup{background:var(--surface2);border:1px solid var(--border);color:var(--gold-dark);font-size:11px;font-weight:700;padding:5px 11px;border-radius:4px;transition:all .18s;display:inline-flex;align-items:center;}
+.btn-backup{background:var(--surface2);border:1px solid var(--border);color:var(--gold-dark);font-size:11px;font-weight:700;padding:5px 11px;border-radius:4px;transition:all .18s;}
 .btn-backup:hover{background:var(--surface3);border-color:var(--gold);}
 .flash{font-size:12px;min-height:18px;margin-top:7px;}
 .hint{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.7;}
@@ -252,13 +252,9 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
 <div class="panel">
   <div class="sec">베팅 현황
     <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <button class="btn btn-backup" onclick="exportData()" title="JSON 파일로 백업">
-        ⬇ 백업
-      </button>
-      <label class="btn btn-backup" style="cursor:pointer;display:inline-flex;align-items:center;" title="JSON 파일 불러오기">
-        ⬆ 복원
-        <input type="file" accept=".json" onchange="importData(event)" style="display:none;position:absolute;">
-      </label>
+      <button class="btn btn-backup" onclick="exportData()">⬇ 백업</button>
+      <button class="btn btn-backup" onclick="document.getElementById('fileInput').click()">⬆ 복원</button>
+      <input id="fileInput" type="file" accept=".json" onchange="importData(event)" style="display:none;position:absolute;">
       <button class="btn btn-red" onclick="clearAll()" style="font-size:11px">초기화</button>
     </div>
   </div>
@@ -691,27 +687,40 @@ function exportData(){
   flash(`백업 완료 — ${bets.length}건 저장`);
 }
 
-function importData(e){
+async function importData(e){
   const file=e.target.files[0];
   if(!file) return;
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=async ev=>{
     try{
       const d=JSON.parse(ev.target.result);
       if(!Array.isArray(d.bets)) throw new Error('형식 오류');
       const count=d.bets.length;
-      if(!confirm(`${count}건의 베팅 데이터를 복원할까요?\n현재 데이터는 덮어씌워집니다.`)){
+      if(!confirm(`${count}건의 베팅 데이터를 복원할까요?\n현재 데이터는 모두 삭제됩니다.`)){
         e.target.value=''; return;
       }
-      bets=d.bets||[];
-      results=d.results||null;
-      closed=!!d.closed;
-      save(); render();
+      setLoading(true);
+      // 기존 베팅 전체 삭제
+      await sb.from('bets').delete().neq('id','00000000-0000-0000-0000-000000000000');
+      // 새 베팅 삽입
+      if(d.bets.length>0){
+        const rows=d.bets.map(b=>({bettor:b.bettor,pick:b.pick,amt:b.amt}));
+        const {error}=await sb.from('bets').insert(rows);
+        if(error) throw error;
+      }
+      // 결과/마감 상태 복원
+      await sb.from('results').update({
+        r1:d.results?.r1||null, r2:d.results?.r2||null,
+        sf:d.results?.sf||null, qf:d.results?.qf||null,
+        closed:!!d.closed
+      }).eq('id',1);
+      await loadFromDB(); render();
       flash(`복원 완료 — ${count}건`);
     }catch(err){
-      flash('파일을 읽을 수 없습니다. 올바른 백업 파일인지 확인하세요.',true);
+      flash('복원 실패: '+err.message,true);
     }
     e.target.value='';
+    setLoading(false);
   };
   reader.readAsText(file);
 }
