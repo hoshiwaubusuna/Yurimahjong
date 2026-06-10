@@ -88,7 +88,22 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
 .hbet-badge{position:absolute;top:4px;right:5px;font-size:9px;font-weight:700;
   background:rgba(184,130,10,.15);color:var(--gold-dark);padding:1px 5px;border-radius:8px;}
 /* 성적 */
-.hcard.rank-1{border-color:#d4a010;background:#fff8d6;box-shadow:0 0 12px rgba(212,160,16,.2);}
+.hcard.shining{animation:cardShine 1.8s ease-in-out infinite;}
+@keyframes cardShine{
+  0%,100%{box-shadow:0 1px 4px rgba(100,80,30,.06);}
+  50%{box-shadow:0 0 16px rgba(184,130,10,.55),0 0 4px rgba(184,130,10,.3);}
+}
+.hcard.blazing{animation:cardBlaze 1.2s ease-in-out infinite;border-color:rgba(192,57,43,.6);}
+@keyframes cardBlaze{
+  0%,100%{box-shadow:0 1px 4px rgba(192,57,43,.1);}
+  50%{box-shadow:0 0 22px rgba(192,57,43,.65),0 0 8px rgba(192,57,43,.4);}
+}
+.star-burst{position:absolute;top:2px;right:2px;font-size:11px;animation:starSpin 1.2s linear infinite;pointer-events:none;line-height:1;}
+@keyframes starSpin{
+  0%{transform:scale(1) rotate(0deg);opacity:1;}
+  50%{transform:scale(1.4) rotate(180deg);opacity:.7;}
+  100%{transform:scale(1) rotate(360deg);opacity:1;}
+}
 .hcard.rank-2{border-color:#5090c8;background:#e8f2fb;}
 .hcard.rank-sf{border-color:#c06050;background:#fdf2f0;}
 .hcard.rank-qf{border-color:#b0a090;background:#f8f5f0;}
@@ -586,10 +601,12 @@ function renderGrid(){
     }
 
     const card=document.createElement('div');
-    card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''}`.trim();
+    const isShining=!results && o!==null && o>=20 && o<50;
+    const isBlazing=!results && o!==null && o>=50;
+    card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''} ${isBlazing?'blazing':isShining?'shining':''}`.trim();
     card.dataset.name=p;
     if(bgStyle) card.style.cssText=bgStyle;
-    card.innerHTML=`${myAmt?`<div class="hbet-badge">${myAmt}P</div>`:''}${rankTag}
+    card.innerHTML=`${isBlazing?'<div class="star-burst">⭐</div>':''}${myAmt?`<div class="hbet-badge">${myAmt}P</div>`:''}${rankTag}
       <div class="hname">${esc(p)}</div>
       <div class="hodds">${o?o.toFixed(2)+'x':'—'}</div>
       <div class="hpool">${pp?pp.toLocaleString()+'P':'—'}</div>`;
