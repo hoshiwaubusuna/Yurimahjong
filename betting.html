@@ -539,6 +539,7 @@ function renderBanner(){
   const el=document.getElementById('rbanner');
   if(!results){ el.classList.remove('show'); el.innerHTML=''; return; }
   const hits=bets.filter(b=>calcPayout(b)>0).length;
+  const sp=settlePool();
   el.classList.add('show');
   el.innerHTML=`
     <div style="font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:8px">결과 확정</div>
@@ -547,7 +548,10 @@ function renderBanner(){
       <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🥈 준우승</div><div class="rname" style="font-size:clamp(16px,3vw,28px);color:#5090c8">${esc(results.r2)}</div></div>
     </div>
     <div style="margin-top:10px;font-size:13px;color:var(--muted)">4강: ${results.sf.map(esc).join(' · ')} &nbsp;|&nbsp; 8강: ${results.qf.map(esc).join(' · ')}</div>
-    <div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:700">적중자 ${hits}명 / 총 ${new Set(bets.map(b=>b.bettor)).size}명</div>`;
+    ${sp===0
+      ? `<div style="margin-top:10px;font-size:13px;color:var(--red);font-weight:700">적중자 없음 · 총 풀 ${totalPool().toLocaleString()}P 미분배 (전원 0P)</div>`
+      : `<div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:700">적중자 ${hits}명 / 총 ${new Set(bets.map(b=>b.bettor)).size}명</div>`
+    }`;
 }
 
 function renderGrid(){
@@ -654,7 +658,7 @@ function renderList(){
         <span style="color:var(--muted);font-size:11px">${b.amt}P</span>
         ${m?`<span style="font-size:10px;color:var(--gold-dark)">×${m}</span>`:''}
         ${results?(isHit?`<span style="color:var(--green);font-size:11px">+${pay}P</span>`:'<span style="color:var(--muted);font-size:11px">0</span>'):''}
-        ${!results?`<button class="btn btn-red" style="padding:1px 6px;font-size:10px" onclick="deleteBet('${b.id}')">×</button>`:''}
+        ${!results?`<button class="btn btn-red" style="padding:1px 6px;font-size:10px" onclick="adminCheck(()=>deleteBet('${b.id}'))">×</button>`:''}
       </div>`;
     }).join('');
     const badge=results?(anyHit?'<span class="badge bh">✓ 적중</span>':'<span class="badge bm">✗ 미적중</span>'):'<span class="badge bw">대기</span>';
