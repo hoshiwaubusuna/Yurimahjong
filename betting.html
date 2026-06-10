@@ -214,7 +214,7 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
   </div>
   <div class="flash" id="flashMsg"></div>
   <div style="margin-top:10px">
-    <button class="btn btn-red" id="closeBtn" onclick="toggleClose()">베팅 마감</button>
+    <button class="btn btn-red" id="closeBtn" onclick="adminCheck(toggleClose)">베팅 마감</button>
   </div>
 </div>
 
@@ -244,8 +244,8 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
     </div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-green" onclick="setResults()">확정 및 정산</button>
-    <button class="btn btn-red" onclick="clearResults()">취소</button>
+    <button class="btn btn-green" onclick="adminCheck(setResults)">확정 및 정산</button>
+    <button class="btn btn-red" onclick="adminCheck(clearResults)">취소</button>
   </div>
 </div>
 
@@ -254,9 +254,9 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
   <div class="sec">베팅 현황
     <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-backup" onclick="exportData()">⬇ 백업</button>
-      <button class="btn btn-backup" onclick="document.getElementById('fileInput').click()">⬆ 복원</button>
+      <button class="btn btn-backup" onclick="adminCheck(()=>document.getElementById('fileInput').click())">⬆ 복원</button>
       <input id="fileInput" type="file" accept=".json" onchange="importData(event)" style="display:none;position:absolute;">
-      <button class="btn btn-red" onclick="clearAll()" style="font-size:11px">초기화</button>
+      <button class="btn btn-red" onclick="adminCheck(clearAll)" style="font-size:11px">초기화</button>
     </div>
   </div>
   <div id="listWrap"><div class="empty">아직 베팅이 없습니다</div></div>
@@ -724,6 +724,22 @@ async function importData(e){
     setLoading(false);
   };
   reader.readAsText(file);
+}
+
+/* ── 관리자 인증 ── */
+const ADMIN_PW='1336';
+let adminUnlocked=false;
+function adminCheck(fn){
+  if(adminUnlocked){fn();return;}
+  const pw=prompt('관리자 비밀번호를 입력하세요');
+  if(pw===null) return;
+  if(pw===ADMIN_PW){
+    adminUnlocked=true;
+    setTimeout(()=>{adminUnlocked=false;},30*60*1000);
+    fn();
+  } else {
+    alert('비밀번호가 틀렸습니다.');
+  }
 }
 
 function flash(msg,err=false){
