@@ -571,9 +571,33 @@ function renderGrid(){
       else if(results.sf.includes(p)){rankCls='rank-sf';rankTag='<div class="rank-tag rt-sf">🏅 4강 ×2</div>';}
       else if(results.qf.includes(p)){rankCls='rank-qf';rankTag='<div class="rank-tag rt-qf">📋 8강 ×1</div>';}
     }
+    // 로그 스케일 배당 강도 계산 (결과 전, 베팅 없는 말 제외)
+    const allOdds=PLAYERS.map(p=>oddsFor(p)).filter(x=>x!==null);
+    const maxOdds=allOdds.length?Math.max(...allOdds):1;
+
+    PLAYERS.forEach(p=>{
+    const pp=pbh[p]||0, o=oddsFor(p), m=results?multFor(p):null;
+    const myAmt=myBets[p];
+    let rankCls='',rankTag='';
+    if(results){
+      if(p===results.r1){rankCls='rank-1';rankTag='<div class="rank-tag rt-1">🥇 우승 ×8</div>';}
+      else if(p===results.r2){rankCls='rank-2';rankTag='<div class="rank-tag rt-2">🥈 준우승 ×4</div>';}
+      else if(results.sf.includes(p)){rankCls='rank-sf';rankTag='<div class="rank-tag rt-sf">🏅 4강 ×2</div>';}
+      else if(results.qf.includes(p)){rankCls='rank-qf';rankTag='<div class="rank-tag rt-qf">📋 8강 ×1</div>';}
+    }
+
+    // 로그 스케일 배경 강도 (결과 없고 베팅 있을 때만)
+    let bgStyle='';
+    if(!results && o!==null && maxOdds>1){
+      const intensity=Math.log(o)/Math.log(maxOdds); // 0~1
+      const alpha=0.06+intensity*0.22; // 0.06~0.28
+      bgStyle=`background:rgba(184,130,10,${alpha.toFixed(3)});`;
+    }
+
     const card=document.createElement('div');
     card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''}`.trim();
     card.dataset.name=p;
+    if(bgStyle) card.style.cssText=bgStyle;
     card.innerHTML=`${myAmt?`<div class="hbet-badge">${myAmt}P</div>`:''}${rankTag}
       <div class="hname">${esc(p)}</div>
       <div class="hodds">${o?o.toFixed(2)+'x':'—'}</div>
