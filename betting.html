@@ -89,11 +89,11 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
   background:rgba(184,130,10,.15);color:var(--gold-dark);padding:1px 5px;border-radius:8px;}
 /* 성적 */
 .hcard.shining{overflow:hidden;}
-.hcard.shining::after{
+.hcard.shining::after,.hcard.blazing::after{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(105deg,transparent 30%,rgba(255,220,100,.55) 50%,rgba(255,255,200,.35) 54%,transparent 70%);
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.5) 50%,rgba(255,255,255,.3) 54%,transparent 70%);
   background-size:200% 100%;
-  animation:shimmer 2.2s ease-in-out infinite;
+  animation:shimmer 3.1s ease-in-out infinite;
   pointer-events:none;border-radius:inherit;
 }
 @keyframes shimmer{
@@ -794,7 +794,7 @@ function startStars(canvas){
     return {
       x: init?Math.random()*W:-8,
       y: Math.random()*H,
-      size: 1.5+Math.random()*2.5,
+      size: (1.5+Math.random()*2.5)*1.3,
       speed: 0.3+Math.random()*0.5,
       color: COLORS[Math.floor(Math.random()*COLORS.length)],
       opacity: 0.15+Math.random()*0.45,
