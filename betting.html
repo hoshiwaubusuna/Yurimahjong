@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麻雀大会 · 베팅</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#b8820a;--gold-dark:#8a6008;--gold-light:#e8a820;
+  --red:#c0392b;--red-bright:#e74c3c;
+  --bg:#f5f0e8;--surface:#fffdf7;--surface2:#f0ebe0;--surface3:#e8e0d0;
+  --text:#2a2018;--muted:#8a7a60;--border:#d4c4a0;
+  --green:#1a7a40;--green-light:#22a856;
+  --shadow:0 2px 12px rgba(100,80,30,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ── 배경 마작패 애니메이션 ── */
+#tileCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45;}
+
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:32px 24px;}
+
+/* ── 헤더 ── */
+header{text-align:center;margin-bottom:32px;position:relative;z-index:2;}
+.title-jp{font-family:'Noto Serif JP',serif;font-size:clamp(26px,5vw,50px);font-weight:900;
+  color:var(--gold-dark);letter-spacing:.15em;
+  text-shadow:0 1px 0 rgba(255,255,255,.8),0 2px 4px rgba(100,80,20,.2);}
+.title-sub{font-size:13px;letter-spacing:.4em;color:var(--muted);margin-top:8px;}
+.divider{width:200px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:14px auto;}
+
+/* ── 패널 ── */
+.panel{background:rgba(255,253,247,.88);border:1px solid var(--border);border-radius:6px;padding:22px;margin-bottom:20px;box-shadow:var(--shadow);backdrop-filter:blur(4px);}
+.sec{font-family:'Noto Serif JP',serif;font-size:13px;letter-spacing:.3em;color:var(--gold-dark);
+  margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);min-width:16px;}
+
+/* ── 입력 ── */
+input,select{background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+  padding:8px 11px;color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:13px;
+  outline:none;transition:border-color .2s,box-shadow .2s;width:100%;}
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,130,10,.12);}
+input::placeholder{color:var(--muted);}
+input:disabled,select:disabled{opacity:.5;cursor:not-allowed;background:var(--surface3);}
+select option{background:#fff;}
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.03em;}
+
+/* ── 버튼 ── */
+.btn{padding:8px 18px;font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:700;
+  border:none;border-radius:4px;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.btn-gold{background:linear-gradient(135deg,#c89420,var(--gold-light),#c89420);color:#fff;
+  box-shadow:0 2px 8px rgba(184,130,10,.25);}
+.btn-gold:hover:not(:disabled){background:linear-gradient(135deg,var(--gold-light),#f0b830,var(--gold-light));transform:translateY(-1px);box-shadow:0 4px 14px rgba(184,130,10,.35);}
+.btn-green{background:linear-gradient(135deg,#1a7a40,var(--green-light));color:#fff;box-shadow:0 2px 8px rgba(26,122,64,.2);}
+.btn-green:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px);}
+.btn-red{background:transparent;border:1px solid rgba(192,57,43,.35);color:var(--red);font-size:12px;padding:5px 11px;border-radius:4px;}
+.btn-red:hover:not(:disabled){background:rgba(192,57,43,.07);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+/* ── 배당 배수 칩 ── */
+.mult-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.mult-chip{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid;}
+.mc1{background:#fff9e6;color:#8a6008;border-color:#d4a830;}
+.mc2{background:#e8f0fa;color:#2060a0;border-color:#80a8d8;}
+.mc3{background:#fdf0ee;color:#a03020;border-color:#d08070;}
+.mc4{background:#f5f5f0;color:var(--muted);border-color:var(--border);}
+
+/* ── 풀 통계 ── */
+.pstats{display:flex;gap:16px;padding:11px 16px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:4px;margin-bottom:16px;flex-wrap:wrap;}
+.ps{text-align:center;}
+.psn{font-size:19px;font-weight:700;color:var(--gold-dark);font-family:'Noto Serif JP',serif;}
+.psl{font-size:10px;color:var(--muted);letter-spacing:.08em;}
+
+/* ── 말 카드 그리드 ── */
+.horse-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
+.hcard{background:var(--surface2);border:1.5px solid var(--border);border-radius:6px;
+  padding:10px 8px;text-align:center;cursor:pointer;
+  transition:all .15s;user-select:none;position:relative;box-shadow:0 1px 4px rgba(100,80,30,.06);}
+.hcard:hover:not(.locked){border-color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 12px rgba(184,130,10,.15);}
+.hcard.locked{cursor:default;}
+.hcard.has-bet{border-color:var(--gold);background:#fffbe8;}
+.hname{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.hodds{font-size:15px;font-weight:900;color:var(--gold-dark);font-family:'Noto Serif JP',serif;}
+.hpool{font-size:10px;color:var(--muted);margin-top:1px;}
+.hbet-badge{position:absolute;top:4px;right:5px;font-size:9px;font-weight:700;
+  background:rgba(184,130,10,.15);color:var(--gold-dark);padding:1px 5px;border-radius:8px;}
+/* 성적 */
+.hcard.rank-1{border-color:#d4a010;background:#fff8d6;box-shadow:0 0 12px rgba(212,160,16,.2);}
+.hcard.rank-2{border-color:#5090c8;background:#e8f2fb;}
+.hcard.rank-sf{border-color:#c06050;background:#fdf2f0;}
+.hcard.rank-qf{border-color:#b0a090;background:#f8f5f0;}
+.rank-tag{font-size:9px;font-weight:700;display:inline-block;padding:1px 5px;border-radius:7px;margin-bottom:3px;}
+.rt-1{background:#fff0b0;color:#8a6008;border:1px solid #d4a030;}
+.rt-2{background:#d0e8f8;color:#2060a0;border:1px solid #80b0d8;}
+.rt-sf{background:#fde0d8;color:#a03020;border:1px solid #d08070;}
+.rt-qf{background:#ece8e0;color:var(--muted);border:1px solid var(--border);}
+
+/* ── 베팅 폼 ── */
+.bet-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.bf1{flex:1;min-width:110px;}
+.bf2{flex:0 0 150px;}
+.bf3{flex:0 0 85px;}
+
+/* ── 한도 바 ── */
+.quota{margin-top:9px;font-size:11px;color:var(--muted);}
+.qbar{height:5px;background:var(--surface3);border-radius:3px;margin-top:4px;overflow:hidden;}
+.qfill{height:100%;border-radius:3px;transition:width .4s;background:linear-gradient(90deg,var(--green-light),var(--gold));}
+.qfill.danger{background:linear-gradient(90deg,var(--gold),var(--red));}
+
+/* ── 베팅 테이블 ── */
+.btable{width:100%;border-collapse:collapse;font-size:12.5px;}
+.btable th{text-align:left;padding:7px 10px;font-size:10px;letter-spacing:.12em;color:var(--muted);
+  border-bottom:2px solid var(--border);font-weight:600;background:var(--surface2);}
+.btable td{padding:7px 10px;border-bottom:1px solid var(--surface3);vertical-align:middle;}
+.btable tr:last-child td{border-bottom:none;}
+.btable tr.hit td{background:#fffbe8;}
+.btable tr.hit .tdn{color:var(--gold-dark);font-weight:700;}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
+.bh{background:#d4f0e0;color:#1a7a40;border:1px solid #80d0a8;}
+.bm{background:#fde8e4;color:#a03020;border:1px solid #e0a090;}
+.bw{background:var(--surface3);color:var(--muted);border:1px solid var(--border);}
+.tdp{color:var(--green);font-weight:700;}
+
+/* ── 결과 배너 ── */
+.rbanner{display:none;text-align:center;padding:22px;
+  background:rgba(255,251,232,.92);
+  border:2px solid var(--gold);border-radius:8px;margin-bottom:20px;
+  box-shadow:0 4px 20px rgba(184,130,10,.15);backdrop-filter:blur(4px);}
+.rbanner.show{display:block;animation:fi .4s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.rname{font-family:'Noto Serif JP',serif;font-size:clamp(22px,4.5vw,42px);font-weight:900;
+  color:var(--gold-dark);letter-spacing:.05em;}
+
+.sb{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;}
+.sb-open{background:#d4f0e0;color:#1a7a40;border:1px solid #80d0a8;}
+.sb-closed{background:#fde8e4;color:#a03020;border:1px solid #e0a090;}
+.sb-done{background:#fff0b0;color:#8a6008;border:1px solid #d4a030;}
+
+/* ── 결과 입력 ── */
+.result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.rcard{background:var(--surface2);border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.rcard-head{padding:6px 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-align:center;}
+.rh1{background:#fff0b0;color:#8a6008;}
+.rh2{background:#d0e8f8;color:#2060a0;}
+.rh-sf{background:#fde0d8;color:#a03020;}
+.rh-qf{background:var(--surface3);color:var(--muted);}
+.rcard select{border:none;border-top:1px solid var(--border);border-radius:0;font-size:12px;background:#fff;}
+
+.btn-backup{background:var(--surface2);border:1px solid var(--border);color:var(--gold-dark);font-size:11px;font-weight:700;padding:5px 11px;border-radius:4px;transition:all .18s;}
+.btn-backup:hover{background:var(--surface3);border-color:var(--gold);}
+.flash{font-size:12px;min-height:18px;margin-top:7px;}
+.hint{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.7;}
+
+@media(max-width:600px){
+  .horse-grid{grid-template-columns:repeat(2,1fr);}
+  .result-grid{grid-template-columns:repeat(2,1fr);}
+  .bf2,.bf3{flex:1;}
+}
+</style>
+</head>
+<body>
+
+<!-- 배경 캔버스 -->
+<canvas id="tileCanvas"></canvas>
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(245,240,232,.7);backdrop-filter:blur(3px);align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="font-family:'Noto Serif JP',serif;font-size:28px;color:var(--gold-dark);animation:spin 1.2s linear infinite">🀄</div>
+  <div style="font-size:13px;color:var(--muted);letter-spacing:.1em">잠시만요...</div>
+</div>
+<style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
+
+<div class="wrap">
+<header>
+  <div class="title-jp">麻雀大会</div>
+  <div class="title-sub">성적 예측 베팅 · 파리뮤추얼</div>
+  <div class="divider"></div>
+</header>
+
+<!-- 결과 배너 -->
+<div class="rbanner" id="rbanner"></div>
+
+<!-- 배당판 -->
+<div class="panel">
+  <div class="sec">실시간 배당판 <span class="sb sb-open" id="statusBadge">베팅 오픈</span></div>
+  <div class="mult-row">
+    <span class="mult-chip mc1">🥇 우승 ×8</span>
+    <span class="mult-chip mc2">🥈 준우승 ×4</span>
+    <span class="mult-chip mc3">🏅 4강 ×2</span>
+    <span class="mult-chip mc4">📋 8강 ×1</span>
+  </div>
+  <div class="pstats" id="pstats"></div>
+  <div class="horse-grid" id="horseGrid"></div>
+  <div class="hint">카드를 클릭하면 해당 말이 자동 선택됩니다. 여러 말에 분산 베팅 가능 · 1인 총 한도 <strong style="color:var(--gold-dark)">1,000P</strong><br>
+  배당 = (해당 말 풀 × 성적 배수) ÷ 총 정산 풀 × 내 베팅 비율</div>
+</div>
+
+<!-- 베팅 입력 -->
+<div class="panel" id="betPanel">
+  <div class="sec">베팅 등록</div>
+  <div class="bet-row">
+    <div class="bf1"><label>닉네임</label><input id="inName" placeholder="닉네임" maxlength="20"></div>
+    <div class="bf2"><label>예측 말</label><select id="inPick"></select></div>
+    <div class="bf3"><label>포인트 <span id="remainLbl" style="color:var(--gold-dark)"></span></label><input id="inAmt" type="number" placeholder="100" min="1" max="1000" value="100"></div>
+    <button class="btn btn-gold" onclick="addBet()">등록</button>
+  </div>
+  <div class="quota" id="quotaWrap" style="display:none">
+    <span id="quotaTxt"></span>
+    <div class="qbar"><div class="qfill" id="qfill"></div></div>
+  </div>
+  <div class="flash" id="flashMsg"></div>
+  <div style="margin-top:10px">
+    <button class="btn btn-red" id="closeBtn" onclick="toggleClose()">베팅 마감</button>
+  </div>
+</div>
+
+<!-- 결과 입력 -->
+<div class="panel">
+  <div class="sec">결과 입력 및 정산</div>
+  <div class="result-grid">
+    <div class="rcard">
+      <div class="rcard-head rh1">🥇 우승 (×8)</div>
+      <select id="r1"></select>
+    </div>
+    <div class="rcard">
+      <div class="rcard-head rh2">🥈 준우승 (×4)</div>
+      <select id="r2"></select>
+    </div>
+    <div class="rcard">
+      <div class="rcard-head rh-sf">🏅 4강 탈락 2명 (×2)</div>
+      <select id="rsf1" style="border-bottom:1px solid var(--border)"></select>
+      <select id="rsf2"></select>
+    </div>
+    <div class="rcard">
+      <div class="rcard-head rh-qf">📋 8강 탈락 4명 (×1)</div>
+      <select id="rqf1" style="border-bottom:1px solid var(--border)"></select>
+      <select id="rqf2" style="border-bottom:1px solid var(--border)"></select>
+      <select id="rqf3" style="border-bottom:1px solid var(--border)"></select>
+      <select id="rqf4"></select>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-green" onclick="setResults()">확정 및 정산</button>
+    <button class="btn btn-red" onclick="clearResults()">취소</button>
+  </div>
+</div>
+
+<!-- 베팅 현황 -->
+<div class="panel">
+  <div class="sec">베팅 현황
+    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-backup" onclick="exportData()" title="JSON 파일로 백업">
+        ⬇ 백업
+      </button>
+      <label class="btn btn-backup" style="cursor:pointer" title="JSON 파일 불러오기">
+        ⬆ 복원
+        <input type="file" accept=".json" onchange="importData(event)" style="display:none">
+      </label>
+      <button class="btn btn-red" onclick="clearAll()" style="font-size:11px">초기화</button>
+    </div>
+  </div>
+  <div id="listWrap"><div class="empty">아직 베팅이 없습니다</div></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ── 배경 애니메이션 ── */
+(function(){
+  const canvas=document.getElementById('tileCanvas');
+  const ctx=canvas.getContext('2d');
+  // 마작 패 한자 목록
+  const CHARS=[
+    '一萬','二萬','三萬','四萬','五萬','六萬','七萬','八萬','九萬',
+    '一筒','二筒','三筒','四筒','五筒','六筒','七筒','八筒','九筒',
+    '一索','二索','三索','四索','五索','六索','七索','八索','九索',
+    '東','南','西','北','中','發','白',
+  ];
+  const tiles=[];
+  const COUNT=28;
+
+  function resize(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize',resize);
+
+  for(let i=0;i<COUNT;i++){
+    tiles.push({
+      x:Math.random()*window.innerWidth,
+      y:Math.random()*window.innerHeight,
+      char:CHARS[Math.floor(Math.random()*CHARS.length)],
+      size:18+Math.random()*22,
+      speed:0.18+Math.random()*0.28,
+      drift:(Math.random()-.5)*0.12,
+      rot:Math.random()*Math.PI*2,
+      rotSpeed:(Math.random()-.5)*0.004,
+      opacity:0.12+Math.random()*0.2,
+    });
+  }
+
+  function drawTile(t){
+    ctx.save();
+    ctx.translate(t.x,t.y);
+    ctx.rotate(t.rot);
+    const w=t.size*1.5, h=t.size*2.2;
+    ctx.fillStyle=`rgba(255,248,220,${t.opacity*0.85})`;
+    ctx.strokeStyle=`rgba(140,100,20,${t.opacity*0.9})`;
+    ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.roundRect(-w/2,-h/2,w,h,4);
+    ctx.fill();
+    ctx.stroke();
+    // 안쪽 테두리
+    ctx.strokeStyle=`rgba(140,100,20,${t.opacity*0.35})`;
+    ctx.lineWidth=0.5;
+    ctx.beginPath();
+    ctx.roundRect(-w/2+3,-h/2+3,w-6,h-6,2);
+    ctx.stroke();
+    // 글자 (두 글자면 세로로)
+    ctx.fillStyle=`rgba(60,30,5,${t.opacity*1.1})`;
+    const chars=t.char.length===2?[t.char[0],t.char[1]]:[t.char];
+    if(chars.length===2){
+      ctx.font=`bold ${t.size*0.72}px 'Noto Serif JP',serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(chars[0],0,-t.size*0.38);
+      ctx.fillText(chars[1],0, t.size*0.38);
+    } else {
+      ctx.font=`bold ${t.size*0.85}px 'Noto Serif JP',serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(chars[0],0,0);
+    }
+    ctx.restore();
+  }
+
+  function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const H=canvas.height, W=canvas.width;
+    tiles.forEach(t=>{
+      t.y-=t.speed;
+      t.x+=t.drift;
+      t.rot+=t.rotSpeed;
+      if(t.y<-60){ t.y=H+40; t.x=Math.random()*W; t.char=CHARS[Math.floor(Math.random()*CHARS.length)]; }
+      if(t.x<-60) t.x=W+40;
+      if(t.x>W+60) t.x=-40;
+      drawTile(t);
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* ── Supabase 초기화 ── */
+const SB_URL='https://dvfgtmxrxpnhufeffqez.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2Zmd0bXhyeHBuaHVmZWZmcWV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDA5MzEsImV4cCI6MjA5NjYxNjkzMX0.hCY_GJbVs-iuwSeOXMluTE6lIHYscDfKCv2ro1ALdsw';
+const { createClient } = supabase;
+const sb = createClient(SB_URL, SB_KEY);
+
+/* ── 상수/상태 ── */
+const PLAYERS=['롸','경경채','모모코','녹차맛','아린켄','오랑시','원쁠원','재생','이온','푸딩','치킨무','시을','스피리아','AB','이르쥬','슈'];
+const MAX=1000;
+const MULT={r1:8,r2:4,sf:2,qf:1};
+
+let bets=[], results=null, closed=false;
+let pollTimer=null;
+
+/* ── 로딩 표시 ── */
+function setLoading(on){
+  document.getElementById('loadingOverlay').style.display=on?'flex':'none';
+}
+
+async function init(){
+  setLoading(true);
+  await loadFromDB();
+  buildSelects();
+  render();
+  setLoading(false);
+  // 30초마다 자동 폴링 (다른 사용자 베팅 실시간 반영)
+  pollTimer=setInterval(async()=>{
+    await loadFromDB();
+    render();
+  }, 30000);
+  document.getElementById('inName').addEventListener('input',updateQuota);
+  document.getElementById('inPick').addEventListener('change',()=>highlightCard(document.getElementById('inPick').value));
+}
+
+/* ── DB 읽기 ── */
+async function loadFromDB(){
+  try{
+    const [{data:betsData},{data:resData}] = await Promise.all([
+      sb.from('bets').select('*').order('created_at',{ascending:true}),
+      sb.from('results').select('*').eq('id',1).single()
+    ]);
+    if(betsData) bets=betsData.map(b=>({bettor:b.bettor,pick:b.pick,amt:b.amt,id:b.id,ts:new Date(b.created_at).getTime()}));
+    if(resData){
+      closed=!!resData.closed;
+      results=(resData.r1)?{r1:resData.r1,r2:resData.r2,sf:resData.sf||[],qf:resData.qf||[]}:null;
+    }
+  }catch(e){ console.error('DB 읽기 오류',e); }
+}
+
+/* ── DB 쓰기 ── */
+async function addBet(){
+  if(closed||results){ flash(results?'정산 완료':'베팅 마감',true); return; }
+  const name=document.getElementById('inName').value.trim();
+  const pick=document.getElementById('inPick').value;
+  const amt=parseInt(document.getElementById('inAmt').value)||0;
+  if(!name){ flash('닉네임을 입력하세요',true); return; }
+  if(!pick){ flash('말을 선택하세요',true); return; }
+  if(amt<1){ flash('1P 이상 입력하세요',true); return; }
+  const used=usedBy(name);
+  if(used+amt>MAX){ flash(`한도 초과! 잔여 ${MAX-used}P`,true); return; }
+
+  setLoading(true);
+  try{
+    // 같은 닉+말 중복이면 기존 행 업데이트
+    const dup=bets.find(b=>b.bettor===name&&b.pick===pick);
+    if(dup){
+      const newAmt=dup.amt+amt;
+      const {error}=await sb.from('bets').update({amt:newAmt}).eq('id',dup.id);
+      if(error) throw error;
+      flash(`${name} → ${pick} +${amt}P (누적 ${newAmt}P)`);
+    } else {
+      const {error}=await sb.from('bets').insert({bettor:name,pick,amt});
+      if(error) throw error;
+      flash(`${name} → ${pick} ${amt}P 등록`);
+    }
+    document.getElementById('inName').value='';
+    document.getElementById('inAmt').value='100';
+    await loadFromDB(); render();
+  }catch(e){ flash('등록 실패: '+e.message,true); }
+  setLoading(false);
+}
+
+async function deleteBet(id){
+  setLoading(true);
+  await sb.from('bets').delete().eq('id',id);
+  await loadFromDB(); render();
+  setLoading(false);
+}
+
+async function clearAll(){
+  if(!confirm('전체 초기화?')) return;
+  setLoading(true);
+  await sb.from('bets').delete().neq('id','00000000-0000-0000-0000-000000000000');
+  await sb.from('results').update({r1:null,r2:null,sf:null,qf:null,closed:false}).eq('id',1);
+  await loadFromDB(); render();
+  setLoading(false);
+}
+
+async function toggleClose(){
+  setLoading(true);
+  await sb.from('results').update({closed:!closed}).eq('id',1);
+  await loadFromDB(); render();
+  setLoading(false);
+}
+
+async function setResults(){
+  const r1=document.getElementById('r1').value,r2=document.getElementById('r2').value;
+  const sf=[document.getElementById('rsf1').value,document.getElementById('rsf2').value];
+  const qf=[document.getElementById('rqf1').value,document.getElementById('rqf2').value,document.getElementById('rqf3').value,document.getElementById('rqf4').value];
+  const all=[r1,r2,...sf,...qf];
+  if(all.some(v=>!v)){ flash('모든 성적을 입력하세요',true); return; }
+  if(new Set(all).size!==all.length){ flash('중복된 선수가 있습니다',true); return; }
+  if(!confirm('결과를 확정하고 정산할까요?')) return;
+  setLoading(true);
+  await sb.from('results').update({r1,r2,sf,qf,closed:true,updated_at:'now()'}).eq('id',1);
+  await loadFromDB(); render();
+  setLoading(false);
+}
+
+async function clearResults(){
+  if(!confirm('결과를 취소할까요?')) return;
+  setLoading(true);
+  await sb.from('results').update({r1:null,r2:null,sf:null,qf:null}).eq('id',1);
+  await loadFromDB(); render();
+  setLoading(false);
+}
+
+/* ── localStorage 백업 (보조) ── */
+function saveLocal(){ try{localStorage.setItem('mahjong_bet_backup',JSON.stringify({bets,results,closed}));}catch(e){} }
+
+function buildSelects(){
+  const ps=document.getElementById('inPick');
+  ps.innerHTML='<option value="">— 선택 —</option>';
+  PLAYERS.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; ps.appendChild(o); });
+  ['r1','r2','rsf1','rsf2','rqf1','rqf2','rqf3','rqf4'].forEach(id=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML='<option value="">—</option>';
+    PLAYERS.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; sel.appendChild(o); });
+    if(results){ const v=getResultVal(id); if(v) sel.value=v; }
+  });
+}
+
+function getResultVal(id){
+  if(!results) return null;
+  const m={r1:results.r1,r2:results.r2,rsf1:results.sf[0],rsf2:results.sf[1],
+    rqf1:results.qf[0],rqf2:results.qf[1],rqf3:results.qf[2],rqf4:results.qf[3]};
+  return m[id];
+}
+
+function poolByHorse(){ const m={}; PLAYERS.forEach(p=>m[p]=0); bets.forEach(b=>m[b.pick]=(m[b.pick]||0)+b.amt); return m; }
+function totalPool(){ return bets.reduce((s,b)=>s+b.amt,0); }
+function multFor(pick){
+  if(!results) return null;
+  if(results.r1===pick) return MULT.r1;
+  if(results.r2===pick) return MULT.r2;
+  if(results.sf.includes(pick)) return MULT.sf;
+  if(results.qf.includes(pick)) return MULT.qf;
+  return 0;
+}
+function settlePool(){
+  if(!results) return 0;
+  const pbh=poolByHorse();
+  return PLAYERS.reduce((s,p)=>{ const m=multFor(p); return s+(m?pbh[p]*m:0); },0);
+}
+function oddsFor(pick){ const t=totalPool(),pp=poolByHorse()[pick]; if(!pp||!t) return null; return t/pp; }
+function calcPayout(b){
+  if(!results) return 0;
+  const m=multFor(b.pick); if(!m) return 0;
+  const pbh=poolByHorse(), horse=pbh[b.pick]; if(!horse) return 0;
+  const sp=settlePool(); if(!sp) return 0;
+  return Math.floor((b.amt/horse)*(horse*m/sp)*totalPool());
+}
+function usedBy(name){ return bets.filter(b=>b.bettor===name).reduce((s,b)=>s+b.amt,0); }
+function highlightCard(pick){
+  document.querySelectorAll('.hcard').forEach(c=>c.classList.toggle('has-bet',c.dataset.name===pick&&!!pick));
+}
+
+function render(){ renderBanner(); renderGrid(); renderForm(); renderList(); updateQuota(); }
+
+function renderBanner(){
+  const el=document.getElementById('rbanner');
+  if(!results){ el.classList.remove('show'); el.innerHTML=''; return; }
+  const hits=bets.filter(b=>calcPayout(b)>0).length;
+  el.classList.add('show');
+  el.innerHTML=`
+    <div style="font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:8px">결과 확정</div>
+    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap">
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🥇 우승</div><div class="rname">${esc(results.r1)}</div></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🥈 준우승</div><div class="rname" style="font-size:clamp(16px,3vw,28px);color:#5090c8">${esc(results.r2)}</div></div>
+    </div>
+    <div style="margin-top:10px;font-size:13px;color:var(--muted)">4강: ${results.sf.map(esc).join(' · ')} &nbsp;|&nbsp; 8강: ${results.qf.map(esc).join(' · ')}</div>
+    <div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:700">적중자 ${hits}명 / 총 ${new Set(bets.map(b=>b.bettor)).size}명</div>`;
+}
+
+function renderGrid(){
+  const grid=document.getElementById('horseGrid');
+  grid.innerHTML='';
+  const pbh=poolByHorse();
+  const name=document.getElementById('inName').value.trim();
+  const myBets={}; if(name) bets.filter(b=>b.bettor===name).forEach(b=>myBets[b.pick]=b.amt);
+
+  PLAYERS.forEach(p=>{
+    const pp=pbh[p]||0, o=oddsFor(p), m=results?multFor(p):null;
+    const myAmt=myBets[p];
+    let rankCls='',rankTag='';
+    if(results){
+      if(p===results.r1){rankCls='rank-1';rankTag='<div class="rank-tag rt-1">🥇 우승 ×8</div>';}
+      else if(p===results.r2){rankCls='rank-2';rankTag='<div class="rank-tag rt-2">🥈 준우승 ×4</div>';}
+      else if(results.sf.includes(p)){rankCls='rank-sf';rankTag='<div class="rank-tag rt-sf">🏅 4강 ×2</div>';}
+      else if(results.qf.includes(p)){rankCls='rank-qf';rankTag='<div class="rank-tag rt-qf">📋 8강 ×1</div>';}
+    }
+    const card=document.createElement('div');
+    card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''}`.trim();
+    card.dataset.name=p;
+    card.innerHTML=`${myAmt?`<div class="hbet-badge">${myAmt}P</div>`:''}${rankTag}
+      <div class="hname">${esc(p)}</div>
+      <div class="hodds">${o?o.toFixed(2)+'x':'—'}</div>
+      <div class="hpool">${pp?pp.toLocaleString()+'P':'—'}</div>`;
+    if(!closed&&!results){
+      card.onclick=()=>{ document.getElementById('inPick').value=p; highlightCard(p); updateQuota(); };
+    }
+    grid.appendChild(card);
+  });
+
+  const total=totalPool(), uniq=new Set(bets.map(b=>b.bettor)).size;
+  document.getElementById('pstats').innerHTML=`
+    <div class="ps"><div class="psn">${total.toLocaleString()}</div><div class="psl">총 풀 (P)</div></div>
+    <div class="ps"><div class="psn">${bets.length}</div><div class="psl">총 베팅 수</div></div>
+    <div class="ps"><div class="psn">${uniq}</div><div class="psl">참가자 수</div></div>
+    ${results?`<div class="ps"><div class="psn" style="color:var(--green)">${bets.filter(b=>calcPayout(b)>0).length}</div><div class="psl">적중 베팅</div></div>`:''}`;
+
+  const badge=document.getElementById('statusBadge');
+  if(results){badge.className='sb sb-done';badge.textContent='정산 완료';}
+  else if(closed){badge.className='sb sb-closed';badge.textContent='베팅 마감';}
+  else{badge.className='sb sb-open';badge.textContent='베팅 오픈';}
+
+  if(results) ['r1','r2','rsf1','rsf2','rqf1','rqf2','rqf3','rqf4'].forEach(id=>{ const v=getResultVal(id); if(v) document.getElementById(id).value=v; });
+}
+
+function renderForm(){
+  const dis=!!(closed||results);
+  ['inName','inPick','inAmt'].forEach(id=>document.getElementById(id).disabled=dis);
+  document.querySelector('#betPanel .btn-gold').disabled=dis;
+  const cb=document.getElementById('closeBtn');
+  cb.disabled=!!results;
+  cb.textContent=closed?'베팅 재오픈':'베팅 마감';
+  cb.style.color=closed?'var(--green)':'var(--red)';
+}
+
+function updateQuota(){
+  const name=document.getElementById('inName').value.trim();
+  const wrap=document.getElementById('quotaWrap');
+  if(!name){wrap.style.display='none';document.getElementById('remainLbl').textContent='';return;}
+  const used=usedBy(name),remain=MAX-used;
+  wrap.style.display='';
+  document.getElementById('remainLbl').textContent=`잔여 ${remain}P`;
+  document.getElementById('quotaTxt').textContent=`${name}님 — 사용 ${used}P / 한도 ${MAX}P`;
+  const pct=used/MAX*100;
+  const fill=document.getElementById('qfill');
+  fill.style.width=pct+'%';
+  fill.className='qfill'+(pct>=80?' danger':'');
+  renderGrid();
+}
+
+function renderList(){
+  const wrap=document.getElementById('listWrap');
+  if(!bets.length){wrap.innerHTML='<div class="empty">아직 베팅이 없습니다</div>';return;}
+
+  const pbh=poolByHorse(),total=totalPool();
+  const sorted=PLAYERS.map(p=>({p,amt:pbh[p]})).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+  const bars=sorted.map(({p,amt})=>{
+    const pct=total?Math.round(amt/total*100):0;
+    const o=oddsFor(p),m=results?multFor(p):null,isHit=m&&m>0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px">
+      <span style="width:68px;text-align:right;font-weight:${isHit?700:400};color:${isHit?'var(--gold-dark)':'var(--text)'}">${esc(p)}</span>
+      <div style="flex:1;background:var(--surface3);border-radius:2px;height:8px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${isHit?'var(--gold-light)':'rgba(184,130,10,.3)'};border-radius:2px;transition:width .5s"></div>
+      </div>
+      <span style="color:var(--muted);width:46px;text-align:right">${amt.toLocaleString()}P</span>
+      <span style="color:var(--gold-dark);width:34px;text-align:right">${o?o.toFixed(2)+'x':'—'}</span>
+      ${m?`<span style="color:var(--gold-dark);font-size:10px;width:28px">×${m}</span>`:'<span style="width:28px"></span>'}
+    </div>`;
+  }).join('');
+
+  const byBettor={};
+  bets.forEach(b=>{ if(!byBettor[b.bettor]) byBettor[b.bettor]=[]; byBettor[b.bettor].push(b); });
+
+  const rows=Object.entries(byBettor).map(([name,bs],pi)=>{
+    const totalAmt=bs.reduce((s,b)=>s+b.amt,0);
+    const totalPay=bs.reduce((s,b)=>s+calcPayout(b),0);
+    const anyHit=results&&bs.some(b=>calcPayout(b)>0);
+    const pickCells=bs.map((b,i)=>{
+      const pay=calcPayout(b),m=results?multFor(b.pick):null,isHit=pay>0;
+      return `<div style="display:flex;align-items:center;gap:6px;${i>0?'margin-top:4px':''}">
+        <span style="font-weight:700;color:${isHit?'var(--gold-dark)':'var(--text)'}">${esc(b.pick)}</span>
+        <span style="color:var(--muted);font-size:11px">${b.amt}P</span>
+        ${m?`<span style="font-size:10px;color:var(--gold-dark)">×${m}</span>`:''}
+        ${results?(isHit?`<span style="color:var(--green);font-size:11px">+${pay}P</span>`:'<span style="color:var(--muted);font-size:11px">0</span>'):''}
+        ${!results?`<button class="btn btn-red" style="padding:1px 6px;font-size:10px" onclick="deleteBet('${b.id}')">×</button>`:''}
+      </div>`;
+    }).join('');
+    const badge=results?(anyHit?'<span class="badge bh">✓ 적중</span>':'<span class="badge bm">✗ 미적중</span>'):'<span class="badge bw">대기</span>';
+    return `<tr class="${anyHit?'hit':''}">
+      <td style="color:var(--muted);font-size:10px">${pi+1}</td>
+      <td class="tdn" style="font-weight:700;vertical-align:top">${esc(name)}</td>
+      <td>${pickCells}</td>
+      <td style="color:var(--gold-dark);vertical-align:top">${totalAmt.toLocaleString()}P</td>
+      <td style="vertical-align:top">${badge}</td>
+      <td class="tdp" style="vertical-align:top">${results?totalPay.toLocaleString()+'P':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML=`
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;letter-spacing:.18em;color:var(--muted);margin-bottom:8px">베팅 분포</div>
+      ${bars}
+    </div>
+    <table class="btable">
+      <thead><tr><th>#</th><th>닉네임</th><th>베팅 내역</th><th>합계</th><th>결과</th><th>정산</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ── 백업/복원 ── */
+function exportData(){
+  if(!bets.length){ flash('백업할 베팅 데이터가 없습니다',true); return; }
+  const data={ bets, results, closed, exportedAt: new Date().toISOString() };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','');
+  a.download=`mahjong_betting_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  flash(`백업 완료 — ${bets.length}건 저장`);
+}
+
+function importData(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!Array.isArray(d.bets)) throw new Error('형식 오류');
+      const count=d.bets.length;
+      if(!confirm(`${count}건의 베팅 데이터를 복원할까요?\n현재 데이터는 덮어씌워집니다.`)){
+        e.target.value=''; return;
+      }
+      bets=d.bets||[];
+      results=d.results||null;
+      closed=!!d.closed;
+      save(); render();
+      flash(`복원 완료 — ${count}건`);
+    }catch(err){
+      flash('파일을 읽을 수 없습니다. 올바른 백업 파일인지 확인하세요.',true);
+    }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+function flash(msg,err=false){
+  const el=document.getElementById('flashMsg');
+  if(!el) return;
+  el.style.color=err?'var(--red)':'var(--green)';
+  el.textContent=msg;
+  clearTimeout(flash._t);
+  flash._t=setTimeout(()=>el.textContent='',2800);
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+init();
+</script>
+</body>
+</html>
