@@ -93,7 +93,7 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
   content:'';position:absolute;inset:0;
   background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.5) 50%,rgba(255,255,255,.3) 54%,transparent 70%);
   background-size:200% 100%;
-  animation:shimmer 7.3s ease-in-out infinite;
+  animation:shimmer 10.0s ease-in-out infinite;
   pointer-events:none;border-radius:inherit;
 }
 @keyframes shimmer{
@@ -600,7 +600,7 @@ function renderGrid(){
     }
 
     const card=document.createElement('div');
-    const isShining=!results && o!==null && o>=20 && o<50;
+    const isShining=!results && o!==null && o>=25 && o<50;
     const isBlazing=!results && o!==null && o>=50;
     card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''} ${isBlazing?'blazing':isShining?'shining':''}`.trim();
     card.dataset.name=p;
