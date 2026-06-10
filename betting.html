@@ -203,7 +203,7 @@ label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-s
 <div class="panel" id="betPanel">
   <div class="sec">베팅 등록</div>
   <div class="bet-row">
-    <div class="bf1"><label>닉네임</label><input id="inName" placeholder="닉네임" maxlength="20"></div>
+    <div class="bf1"><label>닉네임</label><select id="inName"><option value="">— 선택 —</option></select></div>
     <div class="bf2"><label>예측 말</label><select id="inPick"></select></div>
     <div class="bf3"><label>포인트 <span id="remainLbl" style="color:var(--gold-dark)"></span></label><input id="inAmt" type="number" placeholder="100" min="1" max="1000" value="100"></div>
     <button class="btn btn-gold" onclick="addBet()">등록</button>
@@ -381,7 +381,7 @@ async function init(){
     await loadFromDB();
     render();
   }, 30000);
-  document.getElementById('inName').addEventListener('input',updateQuota);
+  document.getElementById('inName').addEventListener('change',updateQuota);
   document.getElementById('inPick').addEventListener('change',()=>highlightCard(document.getElementById('inPick').value));
 }
 
@@ -482,6 +482,11 @@ async function clearResults(){
 function saveLocal(){ try{localStorage.setItem('mahjong_bet_backup',JSON.stringify({bets,results,closed}));}catch(e){} }
 
 function buildSelects(){
+  // 닉네임 선택
+  const ns=document.getElementById('inName');
+  ns.innerHTML='<option value="">— 선택 —</option>';
+  PLAYERS.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; ns.appendChild(o); });
+  // 예측 말 선택
   const ps=document.getElementById('inPick');
   ps.innerHTML='<option value="">— 선택 —</option>';
   PLAYERS.forEach(p=>{ const o=document.createElement('option'); o.value=o.textContent=p; ps.appendChild(o); });
