@@ -561,7 +561,7 @@ function renderSvg(){
   const nameColor = s => isPlaceholder(s) ? '#a89880' : '#2a2018';
 
   wrap.innerHTML = `
-  <svg viewBox="0 0 680 610" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Sans KR','Noto Serif JP',sans-serif">
+  <svg viewBox="0 0 680 608" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Sans KR','Noto Serif JP',sans-serif">
     <rect width="680" height="610" fill="#fdf8f0" rx="6"/>
 
     <!-- 타이틀 -->
@@ -571,10 +571,13 @@ function renderSvg(){
     <text x="340" y="58" text-anchor="middle" font-size="10" fill="#8a7a60" letter-spacing="2">결 승</text>
     <line x1="220" y1="63" x2="460" y2="63" stroke="#d4c4a0" stroke-width="0.8"/>
     <rect x="238" y="70" width="204" height="120" rx="5" fill="#fffbe8" stroke="#b8820a" stroke-width="1.3" stroke-opacity=".9"/>
-    <rect x="238" y="70" width="204" height="24" rx="5" fill="#f5e8b0" fill-opacity=".7"/>
-    <text x="340" y="86" text-anchor="middle" font-size="11" font-weight="700" fill="#8a6008" letter-spacing="1">결 승 탁</text>
-    ${champion?`<text x="340" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#b8820a">🏆 ${champion}</text>`:''}
-    ${r3n.map((n,i)=>`<text x="256" y="${(champion?120:108)+i*18}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+    <foreignObject x="238" y="70" width="204" height="120">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="width:204px;height:120px;font-family:'Noto Sans KR',sans-serif;overflow:hidden;border-radius:5px;">
+        <div style="background:#f5e8b0;padding:5px 0;text-align:center;font-size:11px;font-weight:700;color:#8a6008;letter-spacing:2px;border-bottom:1px solid #d4c4a0;">결 승 탁</div>
+        ${champion?`<div style="padding:4px 10px;font-size:13px;font-weight:700;color:#b8820a;text-align:center;">🏆 ${champion}</div>`:''}
+        ${r3n.map(n=>`<div style="padding:3px 10px;font-size:11px;font-weight:${isPlaceholder(n)?400:600};color:${nameColor(n)};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid rgba(0,0,0,.04);">${n}</div>`).join('')}
+      </div>
+    </foreignObject>
 
     <!-- 결승 ← 준결승 화살표 -->
     <defs>
@@ -591,15 +594,21 @@ function renderSvg(){
 
     <!-- 준결승 1탁 -->
     <rect x="72" y="260" width="204" height="120" rx="5" fill="#fdf5f3" stroke="#c0392b" stroke-width="1" stroke-opacity=".7"/>
-    <rect x="72" y="260" width="204" height="24" rx="5" fill="#faddd8" fill-opacity=".5"/>
-    <text x="174" y="276" text-anchor="middle" font-size="11" font-weight="700" fill="#a03020" letter-spacing="1">준결승 1탁</text>
-    ${r2n0.map((n,i)=>`<text x="90" y="${294+i*20}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+    <foreignObject x="72" y="260" width="204" height="120">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="width:204px;height:120px;font-family:'Noto Sans KR',sans-serif;overflow:hidden;border-radius:5px;">
+        <div style="background:#faddd8;padding:5px 0;text-align:center;font-size:11px;font-weight:700;color:#a03020;letter-spacing:1px;border-bottom:1px solid #e8c0b8;">준결승 1탁</div>
+        ${r2n0.map(n=>`<div style="padding:3px 10px;font-size:11px;font-weight:${isPlaceholder(n)?400:600};color:${nameColor(n)};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid rgba(0,0,0,.04);">${n}</div>`).join('')}
+      </div>
+    </foreignObject>
 
     <!-- 준결승 2탁 -->
     <rect x="404" y="260" width="204" height="120" rx="5" fill="#fdf5f3" stroke="#c0392b" stroke-width="1" stroke-opacity=".7"/>
-    <rect x="404" y="260" width="204" height="24" rx="5" fill="#faddd8" fill-opacity=".5"/>
-    <text x="506" y="276" text-anchor="middle" font-size="11" font-weight="700" fill="#a03020" letter-spacing="1">준결승 2탁</text>
-    ${r2n1.map((n,i)=>`<text x="422" y="${294+i*20}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+    <foreignObject x="404" y="260" width="204" height="120">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="width:204px;height:120px;font-family:'Noto Sans KR',sans-serif;overflow:hidden;border-radius:5px;">
+        <div style="background:#faddd8;padding:5px 0;text-align:center;font-size:11px;font-weight:700;color:#a03020;letter-spacing:1px;border-bottom:1px solid #e8c0b8;">준결승 2탁</div>
+        ${r2n1.map(n=>`<div style="padding:3px 10px;font-size:11px;font-weight:${isPlaceholder(n)?400:600};color:${nameColor(n)};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid rgba(0,0,0,.04);">${n}</div>`).join('')}
+      </div>
+    </foreignObject>
 
     <!-- 16강 ← 준결승 연결 -->
     <line x1="95"  y1="454" x2="95"  y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
@@ -615,34 +624,31 @@ function renderSvg(){
     <line x1="20" y1="452" x2="659" y2="452" stroke="#d4c4a0" stroke-width="0.6" opacity=".6"/>
 
     ${[0,1,2,3].map(ti=>{
-      const x=[20,183,346,509][ti], cx=[95,258,421,584][ti];
+      const x=[18,178,338,498][ti];
       const players=tour.r1[ti].players;
       const scores=st.scores.r1[ti]||[];
       const totals=players.map((_,pi)=>{const g1=parseFloat(scores[pi]?.g1)||0,g2=parseFloat(scores[pi]?.g2)||0;return scores[pi]?.g1!==''||scores[pi]?.g2!==''?g1+g2:null;});
       const ranks=totals.some(t=>t!==null)?computeRanks(totals):players.map(()=>null);
       const rankColors=['#b8820a','#5090c8','#a06840','#8a7a60'];
+      const rows=players.map((name,pi)=>{
+        const r=ranks[pi], tot=totals[pi];
+        const rankBadge=r?`<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${rankColors[r-1]};color:#fff;font-size:8px;font-weight:700;line-height:16px;text-align:center;flex-shrink:0">${r}</span>`:'<span style="width:16px;flex-shrink:0"></span>';
+        const totSpan=tot!==null?`<span style="font-size:9px;color:#8a6008;font-weight:700;flex-shrink:0">${tot}</span>`:'';
+        return `<div style="display:flex;align-items:center;gap:4px;padding:3px 6px;border-bottom:1px solid rgba(0,0,0,.05);">
+          <span style="flex:1;font-size:11px;font-weight:600;color:#2a2018;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+          ${totSpan}${rankBadge}
+        </div>`;
+      }).join('');
       return `
-      <rect x="${x}" y="458" width="150" height="140" rx="5" fill="#fffdf7" stroke="#b8820a" stroke-width="0.9" stroke-opacity=".6"/>
-      <rect x="${x}" y="458" width="150" height="22" rx="5" fill="#f5e8b0" fill-opacity=".5"/>
-      <text x="${cx}" y="473" text-anchor="middle" font-size="10" font-weight="700" fill="#8a6008" letter-spacing="1">16강 ${ti+1}탁</text>
-      ${players.map((name,pi)=>{
-        const r=ranks[pi];
-        const tot=totals[pi];
-        const rankDot=r?`<circle cx="${x+142}" cy="${482+pi*22}" r="5" fill="${rankColors[r-1]}" opacity=".7"/>
-          <text x="${x+142}" y="${485+pi*22}" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">${r}</text>`:'';
-        const totTxt=tot!==null?`<text x="${x+108}" y="${485+pi*22}" text-anchor="end" font-size="9" fill="#8a6008" font-weight="700">${tot}</text>`:'';
-        return `<text x="${x+10}" y="${485+pi*22}" font-size="11.5" fill="#2a2018" font-weight="600">${name}</text>${totTxt}${rankDot}`;
-      }).join('')}`;
+      <rect x="${x}" y="458" width="158" height="140" rx="5" fill="#fffdf7" stroke="#b8820a" stroke-width="0.9" stroke-opacity=".6"/>
+      <foreignObject x="${x}" y="458" width="158" height="140">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="width:158px;height:140px;font-family:'Noto Sans KR',sans-serif;overflow:hidden;border-radius:5px;">
+          <div style="background:#f5e8b0;padding:5px 0;text-align:center;font-size:10px;font-weight:700;color:#8a6008;letter-spacing:1px;border-bottom:1px solid #d4c4a0;">16강 ${ti+1}탁</div>
+          ${rows}
+        </div>
+      </foreignObject>`;
     }).join('')}
 
-    <!-- 범례 -->
-    <circle cx="26" cy="604" r="5" fill="#b8820a" opacity=".7"/>
-    <text x="36" y="608" font-size="9" fill="#8a7a60">1위</text>
-    <circle cx="56" cy="604" r="5" fill="#5090c8" opacity=".7"/>
-    <text x="66" y="608" font-size="9" fill="#8a7a60">2위</text>
-    <circle cx="86" cy="604" r="5" fill="#a06840" opacity=".7"/>
-    <text x="96" y="608" font-size="9" fill="#8a7a60">3위</text>
-    <text x="200" y="608" font-size="9" fill="#8a7a60">각 탁 1·2위 준결승 진출 (교차 배정)</text>
   </svg>`;
 }
 
