@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麻雀大会 · 대진표</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#b8820a;--gold-dark:#8a6008;--gold-light:#e8a820;
+  --red:#c0392b;--red-bright:#e74c3c;
+  --blue:#2980b9;--blue-light:#5dade2;
+  --bg:#f5f0e8;--surface:rgba(255,253,247,.9);--surface2:#f0ebe0;--border:#d4c4a0;
+  --text:#2a2018;--muted:#8a7a60;--green:#1a7a40;
+  --shadow:0 2px 12px rgba(100,80,30,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;overflow-x:hidden;}
+#tileCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.4;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 20px;}
+
+/* 헤더 */
+header{text-align:center;margin-bottom:28px;}
+.title-jp{font-family:'Noto Serif JP',serif;font-size:clamp(28px,5vw,52px);font-weight:900;color:var(--gold-dark);letter-spacing:.15em;text-shadow:0 1px 0 rgba(255,255,255,.9),0 2px 6px rgba(100,80,20,.2);}
+.title-sub{font-size:13px;letter-spacing:.4em;color:var(--muted);margin-top:8px;}
+.divider{width:200px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:12px auto;}
+
+/* 홈 버튼 */
+.home-btn{position:fixed;top:16px;left:16px;z-index:10;padding:7px 14px;background:rgba(255,253,247,.9);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:12px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;backdrop-filter:blur(4px);box-shadow:var(--shadow);transition:all .2s;}
+.home-btn:hover{border-color:var(--gold);color:var(--gold-dark);}
+
+/* 대회 선택 탭 */
+.tour-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.tour-tab{padding:8px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;color:var(--muted);}
+.tour-tab.active{background:#fffbe8;border-color:var(--gold);color:var(--gold-dark);}
+.tour-tab:hover:not(.active){border-color:var(--gold);color:var(--gold-dark);}
+
+/* 라운드 레이블 */
+.rounds-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.round-block{}
+.round-title{font-family:'Noto Serif JP',serif;font-size:12px;letter-spacing:.25em;color:var(--muted);text-align:center;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+
+/* 탁 카드 */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);backdrop-filter:blur(4px);}
+.table-header{background:#faf6ec;padding:7px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);}
+.table-icon{font-size:14px;}
+.table-name{font-size:11px;letter-spacing:.15em;color:var(--gold-dark);font-weight:700;}
+.table-cond{margin-left:auto;font-size:9px;color:var(--muted);}
+
+/* 플레이어 행 */
+.player-rows{padding:6px 10px;}
+.player-row{display:grid;grid-template-columns:1fr 52px 52px 52px 36px;gap:4px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;}
+.player-row:last-child{border-bottom:none;}
+.player-row.header-row{font-size:9px;color:var(--muted);letter-spacing:.08em;padding-bottom:3px;border-bottom:1px solid var(--border);margin-bottom:2px;}
+.pname{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pname.empty{color:var(--muted);font-weight:400;font-size:11px;}
+.score-in{background:#fff;border:1px solid var(--border);border-radius:3px;padding:2px 4px;font-size:11px;text-align:right;width:100%;outline:none;transition:border-color .15s;font-family:'Noto Sans KR',sans-serif;color:var(--text);}
+.score-in:focus{border-color:var(--gold);}
+.total-cell{font-size:11px;font-weight:700;color:var(--gold-dark);text-align:right;}
+.rank-cell{font-size:11px;font-weight:700;text-align:right;}
+.rank-1{color:#b8820a;}
+.rank-2{color:#5090c8;}
+.rank-3{color:#a06840;}
+.rank-4{color:var(--muted);}
+
+/* 진출 배지 */
+.adv-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 5px;border-radius:6px;margin-left:4px;}
+.adv-sf{background:#d0e8f8;color:#2060a0;border:1px solid #80b0d8;}
+.adv-f{background:#fff0b0;color:#8a6008;border:1px solid #d4a030;}
+
+/* 드롭 */
+.advancer-section{padding:8px 10px 10px;border-top:1px solid var(--border);background:#faf6ec;}
+.advancer-label{font-size:9px;letter-spacing:.2em;color:var(--muted);margin-bottom:5px;}
+.chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--gold-dark);cursor:grab;user-select:none;transition:all .15s;box-shadow:0 1px 3px rgba(100,80,30,.07);}
+.chip:hover{border-color:var(--gold);transform:translateY(-1px);}
+.chip.dragging{opacity:.35;}
+.drop-slot{color:var(--muted);font-size:11px;outline:1px dashed var(--border);border-radius:2px;padding:0 2px;cursor:pointer;}
+.drop-slot.drag-over{background:rgba(184,130,10,.1);outline-color:var(--gold);color:var(--gold-dark);}
+
+/* 완료 배너 */
+.champ-banner{display:none;text-align:center;padding:20px;background:#fffbe8;border:2px solid var(--gold);border-radius:8px;margin-top:16px;box-shadow:var(--shadow);}
+.champ-banner.show{display:block;animation:fi .4s ease;}
+@keyframes fi{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.champ-name{font-family:'Noto Serif JP',serif;font-size:clamp(24px,5vw,44px);font-weight:900;color:var(--gold-dark);}
+
+/* 저장 버튼 */
+.save-row{display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap;}
+.btn{padding:8px 18px;font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:700;border:none;border-radius:4px;cursor:pointer;transition:all .2s;}
+.btn-gold{background:linear-gradient(135deg,#c89420,var(--gold-light));color:#fff;box-shadow:0 2px 8px rgba(184,130,10,.2);}
+.btn-gold:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.btn-red{background:transparent;border:1px solid rgba(192,57,43,.35);color:var(--red);font-size:11px;padding:6px 12px;}
+.btn-red:hover{background:rgba(192,57,43,.07);}
+
+.flash{font-size:12px;min-height:16px;text-align:right;margin-bottom:8px;color:var(--green);}
+
+/* 뷰 탭 (대진표/결과기록) */
+.view-tabs{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface2);}
+.view-tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;color:var(--muted);background:transparent;border:none;font-family:'Noto Sans KR',sans-serif;letter-spacing:.05em;}
+.view-tab.active{background:rgba(255,251,232,.95);color:var(--gold-dark);box-shadow:inset 0 -2px 0 var(--gold);}
+.view-tab:first-child{border-right:1px solid var(--border);}
+.view-panel{display:none;}
+.view-panel.active{display:block;}
+
+/* SVG 도표 래퍼 */
+.svg-wrap{background:rgba(255,253,247,.9);border:1px solid var(--border);border-radius:6px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(4px);overflow-x:auto;}
+.svg-wrap svg{max-width:100%;height:auto;display:block;margin:0 auto;}
+</style>
+</head>
+<body>
+<canvas id="tileCanvas"></canvas>
+
+<a class="home-btn" href="index.html">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  홈
+</a>
+
+<div class="wrap">
+  <header>
+    <div class="title-jp">麻雀大会</div>
+    <div class="title-sub">대진표 · 결과 기록</div>
+    <div class="divider"></div>
+  </header>
+
+  <!-- 대회 탭 -->
+  <div class="tour-tabs" id="tourTabs"></div>
+
+  <!-- 뷰 탭 -->
+  <div class="view-tabs">
+    <button class="view-tab active" id="tabSvg" onclick="switchView('svg')">대진표</button>
+    <button class="view-tab" id="tabRecords" onclick="switchView('records')">결과 기록</button>
+  </div>
+
+  <!-- 대진표 SVG 패널 -->
+  <div class="view-panel active" id="panelSvg">
+    <div class="svg-wrap" id="svgWrap"></div>
+  </div>
+
+  <!-- 결과 기록 패널 -->
+  <div class="view-panel" id="panelRecords">
+    <div class="save-row">
+      <span class="flash" id="flashMsg"></span>
+      <button class="btn btn-gold" onclick="saveData()">저장</button>
+      <button class="btn btn-red" onclick="resetTournament()">초기화</button>
+    </div>
+    <div class="rounds-wrap" id="roundsWrap"></div>
+    <div class="champ-banner" id="champBanner">
+      <div style="font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:6px">🏆 우승</div>
+      <div class="champ-name" id="champName"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══ 배경 애니메이션 ══ */
+(function(){
+  const canvas=document.getElementById('tileCanvas'),ctx=canvas.getContext('2d');
+  const CHARS=['一萬','二萬','三萬','四萬','五萬','六萬','七萬','八萬','九萬','一筒','二筒','三筒','四筒','五筒','六筒','七筒','八筒','九筒','一索','二索','三索','四索','五索','六索','七索','八索','九索','東','南','西','北','中','發','白'];
+  const tiles=[];
+  function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  for(let i=0;i<24;i++) tiles.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,char:CHARS[Math.floor(Math.random()*CHARS.length)],size:18+Math.random()*20,speed:0.15+Math.random()*0.25,drift:(Math.random()-.5)*0.1,rot:Math.random()*Math.PI*2,rotSpeed:(Math.random()-.5)*0.003,opacity:0.1+Math.random()*0.18});
+  function drawTile(t){
+    ctx.save();ctx.translate(t.x,t.y);ctx.rotate(t.rot);
+    const w=t.size*1.5,h=t.size*2.2;
+    ctx.fillStyle=`rgba(255,248,220,${t.opacity*.85})`;ctx.strokeStyle=`rgba(140,100,20,${t.opacity*.9})`;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.roundRect(-w/2,-h/2,w,h,4);ctx.fill();ctx.stroke();
+    ctx.fillStyle=`rgba(60,30,5,${t.opacity*1.1})`;
+    const chars=t.char.length===2?[t.char[0],t.char[1]]:[t.char];
+    if(chars.length===2){ctx.font=`bold ${t.size*.72}px 'Noto Serif JP',serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(chars[0],0,-t.size*.38);ctx.fillText(chars[1],0,t.size*.38);}
+    else{ctx.font=`bold ${t.size*.85}px 'Noto Serif JP',serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(chars[0],0,0);}
+    ctx.restore();
+  }
+  function animate(){ctx.clearRect(0,0,canvas.width,canvas.height);tiles.forEach(t=>{t.y-=t.speed;t.x+=t.drift;t.rot+=t.rotSpeed;if(t.y<-60){t.y=canvas.height+40;t.x=Math.random()*canvas.width;t.char=CHARS[Math.floor(Math.random()*CHARS.length)];}if(t.x<-60)t.x=canvas.width+40;if(t.x>canvas.width+60)t.x=-40;drawTile(t);});requestAnimationFrame(animate);}
+  animate();
+})();
+
+/* ══ 대회 데이터 정의 ══ */
+const TOURNAMENTS = [
+  {
+    id: '2026',
+    label: '2026 백합마작대회',
+    // 16강
+    r1: [
+      { name:'16강 1탁', players:['스피리아','원쁠원','오랑시','아린켄'], cond:'2판 합산 · 1·2위 진출' },
+      { name:'16강 2탁', players:['이르쥬','경경채','이온','AB'],     cond:'2판 합산 · 1·2위 진출' },
+      { name:'16강 3탁', players:['푸딩','슈','모모코','재생'],       cond:'2판 합산 · 1·2위 진출' },
+      { name:'16강 4탁', players:['시을','롸','치킨무','녹차맛'],     cond:'2판 합산 · 1·2위 진출' },
+    ],
+    // 준결승: 교차 배정 설명
+    r2: [
+      { name:'준결승 1탁', slots:['16강 1탁 1위','16강 2탁 2위','16강 3탁 1위','16강 4탁 2위'], cond:'1·2위 진출' },
+      { name:'준결승 2탁', slots:['16강 1탁 2위','16강 2탁 1위','16강 3탁 2위','16강 4탁 1위'], cond:'1·2위 진출' },
+    ],
+    r3: [
+      { name:'결승탁', slots:['준결승 1탁 1위','준결승 1탁 2위','준결승 2탁 1위','준결승 2탁 2위'], cond:'' },
+    ],
+  },
+  // 미래 대회 추가 예시:
+  // { id:'2027', label:'2027 백합마작대회', r1:[...], r2:[...], r3:[...] },
+];
+
+/* ══ 상태 ══ */
+// scores[tourId][round][tableIdx][playerIdx] = {g1, g2} (r1) or {g1} (r2/r3)
+// advancers[tourId][round][tableIdx] = [name, name, ...]
+let state = {};
+let curTour = TOURNAMENTS[0].id;
+let dragName = null;
+
+const KEY = 'mahjong_bracket_v1';
+
+function initState(){
+  try{ const d=JSON.parse(localStorage.getItem(KEY)||'{}'); state=d; }catch(e){ state={}; }
+  TOURNAMENTS.forEach(t=>{
+    if(!state[t.id]) state[t.id]={ scores:{r1:[],r2:[],r3:[]}, advancers:{r2:[[],[]],r3:[[]]} };
+    // r1 점수 초기화
+    t.r1.forEach((_,ti)=>{
+      if(!state[t.id].scores.r1[ti]) state[t.id].scores.r1[ti]=Array(4).fill(null).map(()=>({g1:'',g2:''}));
+    });
+    t.r2.forEach((_,ti)=>{
+      if(!state[t.id].scores.r2[ti]) state[t.id].scores.r2[ti]=Array(4).fill(null).map(()=>({g1:''}));
+    });
+    t.r3.forEach((_,ti)=>{
+      if(!state[t.id].scores.r3[ti]) state[t.id].scores.r3[ti]=Array(4).fill(null).map(()=>({g1:''}));
+    });
+    if(!state[t.id].advancers) state[t.id].advancers={r2:[[],[]],r3:[[]]};
+  });
+}
+
+function saveData(){
+  try{ localStorage.setItem(KEY,JSON.stringify(state)); flash('저장됐어!'); }catch(e){ flash('저장 실패',true); }
+}
+function resetTournament(){
+  if(!confirm('이 대회 데이터를 초기화할까요?')) return;
+  const t=TOURNAMENTS.find(x=>x.id===curTour);
+  state[curTour]={ scores:{r1:[],r2:[],r3:[]}, advancers:{r2:[[],[]],r3:[[]]} };
+  initState(); render();
+}
+
+/* ══ 순위 계산 ══ */
+function computeRanks(scores){
+  const valid=scores.map((s,i)=>({s,i})).filter(x=>x.s!==null&&x.s!=='');
+  if(!valid.length) return scores.map(()=>null);
+  valid.sort((a,b)=>Number(b.s)-Number(a.s));
+  const ranks=scores.map(()=>null);
+  let rank=1;
+  for(let i=0;i<valid.length;i++){
+    if(i>0&&valid[i].s===valid[i-1].s) ranks[valid[i].i]=ranks[valid[i-1].i];
+    else ranks[valid[i].i]=rank;
+    rank++;
+  }
+  return ranks;
+}
+
+/* ══ 렌더 ══ */
+function render(){
+  renderTabs();
+  renderRounds();
+  if(curView==='svg') renderSvg();
+}
+
+function renderTabs(){
+  const wrap=document.getElementById('tourTabs');
+  wrap.innerHTML='';
+  TOURNAMENTS.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='tour-tab'+(t.id===curTour?' active':'');
+    btn.textContent=t.label;
+    btn.onclick=()=>{ curTour=t.id; render(); renderSvg(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderRounds(){
+  const wrap=document.getElementById('roundsWrap');
+  wrap.innerHTML='';
+  const tour=TOURNAMENTS.find(x=>x.id===curTour);
+  const st=state[curTour];
+
+  // ── 16강 ──
+  const r1block=makeBlock('16강 · 2판 합산');
+  tour.r1.forEach((tbl,ti)=>{
+    const scores=st.scores.r1[ti]||[];
+    const totals=tbl.players.map((_,pi)=>{
+      const g1=parseFloat(scores[pi]?.g1)||0;
+      const g2=parseFloat(scores[pi]?.g2)||0;
+      return scores[pi]?.g1!==''||scores[pi]?.g2!=='' ? g1+g2 : null;
+    });
+    const hasAny=scores.some(s=>s.g1!==''||s.g2!=='');
+    const ranks=hasAny?computeRanks(totals):tbl.players.map(()=>null);
+    const advs=st.advancers.r2;
+    const allAdvsFlat=[...advs[0],...advs[1]];
+
+    const card=makeCard(tbl.name, tbl.cond);
+    // 헤더행
+    const hrow=makePlayerRow(true);
+    hrow.children[0].textContent='';
+    hrow.children[1].textContent='1국';
+    hrow.children[2].textContent='2국';
+    hrow.children[3].textContent='합산';
+    hrow.children[4].textContent='순위';
+    card.querySelector('.player-rows').appendChild(hrow);
+
+    tbl.players.forEach((name,pi)=>{
+      const row=makePlayerRow(false);
+      // 이름
+      const nameSpan=row.children[0];
+      nameSpan.textContent=name;
+      // 진출 배지
+      if(allAdvsFlat.includes(name)){
+        const isF=st.advancers.r3[0].includes(name);
+        const badge=document.createElement('span');
+        badge.className='adv-badge '+(isF?'adv-f':'adv-sf');
+        badge.textContent=isF?'결승':'준결';
+        nameSpan.appendChild(badge);
+      }
+      // 1국
+      const in1=makeScoreInput(scores[pi]?.g1||'', v=>{ if(!st.scores.r1[ti]) st.scores.r1[ti]=Array(4).fill(null).map(()=>({g1:'',g2:''})); st.scores.r1[ti][pi].g1=v; renderRounds(); });
+      row.children[1].appendChild(in1);
+      // 2국
+      const in2=makeScoreInput(scores[pi]?.g2||'', v=>{ st.scores.r1[ti][pi].g2=v; renderRounds(); });
+      row.children[2].appendChild(in2);
+      // 합산
+      row.children[3].textContent=totals[pi]!==null?totals[pi]:'';
+      row.children[3].className='total-cell';
+      // 순위
+      const r=ranks[pi];
+      row.children[4].textContent=r?r+'위':'';
+      row.children[4].className='rank-cell'+(r?` rank-${r}`:'');
+      card.querySelector('.player-rows').appendChild(row);
+    });
+
+    // 진출자 칩 (완료된 탁만)
+    const isDone=totals.every(t=>t!==null);
+    if(isDone){
+      const advsec=document.createElement('div');
+      advsec.className='advancer-section';
+      advsec.innerHTML='<div class="advancer-label">▶ 준결승 진출자 배정</div><div class="chips" id="r1chips-'+ti+'"></div>';
+      card.appendChild(advsec);
+      setTimeout(()=>{
+        const chipsWrap=document.getElementById('r1chips-'+ti);
+        if(!chipsWrap) return;
+        tbl.players.forEach(name=>{
+          if(allAdvsFlat.includes(name)) return;
+          const chip=makeChip(name);
+          chipsWrap.appendChild(chip);
+        });
+      },0);
+    }
+    r1block.appendChild(card);
+  });
+  wrap.appendChild(r1block);
+
+  // ── 준결승 ──
+  const r2block=makeBlock('준결승');
+  const r2advFlat=[...st.advancers.r3[0]];
+  tour.r2.forEach((tbl,ti)=>{
+    const players=st.advancers.r2[ti]||[];
+    const scores=st.scores.r2[ti]||[];
+    const hasAny=scores.some(s=>s?.g1!=='');
+    const rawScores=players.map((_,pi)=>scores[pi]?.g1!==''?parseFloat(scores[pi]?.g1)||0:null);
+    const ranks=hasAny?computeRanks(rawScores):players.map(()=>null);
+    const card=makeCard(tbl.name, tbl.cond);
+    const hrow=makePlayerRow(true);
+    hrow.children[0].textContent='';
+    hrow.children[1].textContent='점수';
+    hrow.children[2].textContent='';
+    hrow.children[3].textContent='';
+    hrow.children[4].textContent='순위';
+    card.querySelector('.player-rows').appendChild(hrow);
+
+    for(let pi=0;pi<4;pi++){
+      const name=players[pi]||null;
+      const row=makePlayerRow(false);
+      const nameSpan=row.children[0];
+      if(name){
+        nameSpan.textContent=name;
+        if(r2advFlat.includes(name)){
+          const badge=document.createElement('span');
+          badge.className='adv-badge adv-f'; badge.textContent='결승';
+          nameSpan.appendChild(badge);
+        }
+        const inp=makeScoreInput(scores[pi]?.g1||'', v=>{ if(!st.scores.r2[ti][pi]) st.scores.r2[ti][pi]={g1:''}; st.scores.r2[ti][pi].g1=v; renderRounds(); });
+        row.children[1].appendChild(inp);
+      } else {
+        nameSpan.className='pname empty'; nameSpan.textContent='여기에 드래그';
+        nameSpan.classList.add('drop-slot');
+        bindDrop(nameSpan, ()=>{ if(!st.advancers.r2[ti]) st.advancers.r2[ti]=[]; st.advancers.r2[ti][pi]=dragName; dragName=null; renderRounds(); });
+      }
+      const r=ranks[pi];
+      row.children[4].textContent=r?r+'위':'';
+      row.children[4].className='rank-cell'+(r?` rank-${r}`:'');
+      card.querySelector('.player-rows').appendChild(row);
+    }
+
+    // 결승 진출자 배정
+    const isDone=players.length===4&&players.every(Boolean)&&rawScores.every(s=>s!==null);
+    if(isDone){
+      const advsec=document.createElement('div');
+      advsec.className='advancer-section';
+      advsec.innerHTML='<div class="advancer-label">▶ 결승 진출자 배정</div><div class="chips" id="r2chips-'+ti+'"></div>';
+      card.appendChild(advsec);
+      setTimeout(()=>{
+        const cw=document.getElementById('r2chips-'+ti); if(!cw) return;
+        players.forEach(name=>{
+          if(r2advFlat.includes(name)) return;
+          cw.appendChild(makeChip(name));
+        });
+      },0);
+    }
+    r2block.appendChild(card);
+  });
+  wrap.appendChild(r2block);
+
+  // ── 결승 ──
+  const r3block=makeBlock('결승');
+  const finalPlayers=st.advancers.r3[0]||[];
+  const fscores=st.scores.r3[0]||[];
+  const frawScores=finalPlayers.map((_,pi)=>fscores[pi]?.g1!==''?parseFloat(fscores[pi]?.g1)||0:null);
+  const franks=frawScores.some(s=>s!==null)?computeRanks(frawScores):finalPlayers.map(()=>null);
+  const fcard=makeCard('결승탁','');
+  const fhrow=makePlayerRow(true);
+  fhrow.children[0].textContent=''; fhrow.children[1].textContent='점수'; fhrow.children[4].textContent='순위';
+  fcard.querySelector('.player-rows').appendChild(fhrow);
+  for(let pi=0;pi<4;pi++){
+    const name=finalPlayers[pi]||null;
+    const row=makePlayerRow(false);
+    const ns=row.children[0];
+    if(name){
+      ns.textContent=name;
+      const inp=makeScoreInput(fscores[pi]?.g1||'', v=>{ if(!st.scores.r3[0][pi]) st.scores.r3[0][pi]={g1:''}; st.scores.r3[0][pi].g1=v; renderRounds(); });
+      row.children[1].appendChild(inp);
+    } else {
+      ns.className='pname empty drop-slot'; ns.textContent='여기에 드래그';
+      bindDrop(ns,()=>{ if(!st.advancers.r3[0]) st.advancers.r3[0]=[]; st.advancers.r3[0][pi]=dragName; dragName=null; renderRounds(); });
+    }
+    const r=franks[pi];
+    row.children[4].textContent=r?r+'위':'';
+    row.children[4].className='rank-cell'+(r?` rank-${r}`:'');
+    fcard.querySelector('.player-rows').appendChild(row);
+  }
+  r3block.appendChild(fcard);
+  wrap.appendChild(r3block);
+
+  // 우승자 배너
+  const champ=franks.indexOf(1);
+  const champBanner=document.getElementById('champBanner');
+  if(champ>=0&&finalPlayers[champ]){
+    champBanner.classList.add('show');
+    document.getElementById('champName').textContent=finalPlayers[champ];
+  } else { champBanner.classList.remove('show'); }
+}
+
+/* ══ 헬퍼 ══ */
+function makeBlock(title){
+  const d=document.createElement('div'); d.className='round-block';
+  d.innerHTML=`<div class="round-title">${title}</div>`;
+  return d;
+}
+function makeCard(name,cond){
+  const d=document.createElement('div'); d.className='table-card';
+  d.innerHTML=`<div class="table-header"><span class="table-icon">🀄</span><span class="table-name">${name}</span><span class="table-cond">${cond}</span></div><div class="player-rows"></div>`;
+  return d;
+}
+function makePlayerRow(isHeader){
+  const d=document.createElement('div');
+  d.className='player-row'+(isHeader?' header-row':'');
+  for(let i=0;i<5;i++){ const s=document.createElement('span'); d.appendChild(s); }
+  d.children[0].className='pname';
+  d.children[3].className='total-cell';
+  d.children[4].className='rank-cell';
+  return d;
+}
+function makeScoreInput(val, onChange){
+  const inp=document.createElement('input');
+  inp.className='score-in'; inp.type='number'; inp.value=val; inp.placeholder='0';
+  inp.addEventListener('input',e=>onChange(e.target.value));
+  inp.addEventListener('wheel',()=>inp.blur());
+  return inp;
+}
+function makeChip(name){
+  const c=document.createElement('div'); c.className='chip'; c.textContent=name; c.draggable=true;
+  c.addEventListener('dragstart',e=>{ dragName=name; c.classList.add('dragging'); e.dataTransfer.setData('text',name); });
+  c.addEventListener('dragend',()=>c.classList.remove('dragging'));
+  return c;
+}
+function bindDrop(el,onDrop){
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drag-over'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('drag-over');if(dragName)onDrop();});
+}
+function flash(msg,err=false){
+  const el=document.getElementById('flashMsg');
+  el.style.color=err?'var(--red)':'var(--green)'; el.textContent=msg;
+  clearTimeout(flash._t); flash._t=setTimeout(()=>el.textContent='',2500);
+}
+
+/* ══ 뷰 탭 전환 ══ */
+let curView = 'svg';
+function switchView(v){
+  curView = v;
+  document.getElementById('tabSvg').classList.toggle('active', v==='svg');
+  document.getElementById('tabRecords').classList.toggle('active', v==='records');
+  document.getElementById('panelSvg').classList.toggle('active', v==='svg');
+  document.getElementById('panelRecords').classList.toggle('active', v==='records');
+  if(v==='svg') renderSvg();
+}
+
+/* ══ SVG 대진표 렌더 ══ */
+function renderSvg(){
+  const tour = TOURNAMENTS.find(x=>x.id===curTour);
+  const st = state[curTour];
+  const wrap = document.getElementById('svgWrap');
+
+  // 진출자 정보
+  const advsR2 = st.advancers?.r2 || [[],[]];
+  const advsR3 = st.advancers?.r3 || [[]];
+
+  // 16강 각 탁 1·2위 이름 구하기
+  function getR1TopTwo(ti){
+    const players = tour.r1[ti].players;
+    const scores = st.scores.r1[ti] || [];
+    const totals = players.map((_,pi)=>{
+      const g1=parseFloat(scores[pi]?.g1)||0, g2=parseFloat(scores[pi]?.g2)||0;
+      return scores[pi]?.g1!==''||scores[pi]?.g2!=='' ? g1+g2 : null;
+    });
+    if(totals.every(t=>t===null)) return ['—','—'];
+    const ranked=[...players.map((n,i)=>({n,t:totals[i]}))].sort((a,b)=>(b.t??-Infinity)-(a.t??-Infinity));
+    return [ranked[0]?.n||'—', ranked[1]?.n||'—'];
+  }
+
+  // 준결승 표시할 이름 (배정됐으면 실제 이름, 아니면 설명)
+  function r2Names(ti){
+    const adv = advsR2[ti]||[];
+    if(adv.length===4 && adv.every(Boolean)) return adv;
+    // 배정 전: 설명 텍스트
+    return ti===0
+      ? ['16강 1탁 1위','16강 2탁 2위','16강 3탁 1위','16강 4탁 2위']
+      : ['16강 1탁 2위','16강 2탁 1위','16강 3탁 2위','16강 4탁 1위'];
+  }
+  function r3Names(){
+    const adv = advsR3[0]||[];
+    if(adv.length===4&&adv.every(Boolean)) return adv;
+    return ['준결승 1탁 1위','준결승 1탁 2위','준결승 2탁 1위','준결승 2탁 2위'];
+  }
+
+  // 우승자
+  const fscores = st.scores.r3[0]||[];
+  const fplayers = advsR3[0]||[];
+  let champion = null;
+  if(fplayers.length===4&&fplayers.every(Boolean)){
+    const ftotals=fplayers.map((_,i)=>fscores[i]?.g1!==''?parseFloat(fscores[i]?.g1)||0:null);
+    if(ftotals.some(t=>t!==null)){
+      const maxI=ftotals.reduce((mi,t,i)=>t!==null&&(mi===-1||t>ftotals[mi])?i:mi,-1);
+      if(maxI>=0) champion=fplayers[maxI];
+    }
+  }
+
+  const r2n0=r2Names(0), r2n1=r2Names(1), r3n=r3Names();
+  const isPlaceholder = s => s.includes('탁')||s==='—';
+  const nameColor = s => isPlaceholder(s) ? '#a89880' : '#2a2018';
+
+  wrap.innerHTML = `
+  <svg viewBox="0 0 680 610" xmlns="http://www.w3.org/2000/svg" style="font-family:'Noto Sans KR','Noto Serif JP',sans-serif">
+    <rect width="680" height="610" fill="#fdf8f0" rx="6"/>
+
+    <!-- 타이틀 -->
+    <text x="340" y="30" text-anchor="middle" font-family="'Noto Serif JP',serif" font-size="15" font-weight="900" fill="#8a6008" letter-spacing="4">${tour.label}</text>
+
+    <!-- 결승 -->
+    <text x="340" y="58" text-anchor="middle" font-size="10" fill="#8a7a60" letter-spacing="2">결 승</text>
+    <line x1="220" y1="63" x2="460" y2="63" stroke="#d4c4a0" stroke-width="0.8"/>
+    <rect x="238" y="70" width="204" height="120" rx="5" fill="#fffbe8" stroke="#b8820a" stroke-width="1.3" stroke-opacity=".9"/>
+    <rect x="238" y="70" width="204" height="24" rx="5" fill="#f5e8b0" fill-opacity=".7"/>
+    <text x="340" y="86" text-anchor="middle" font-size="11" font-weight="700" fill="#8a6008" letter-spacing="1">결 승 탁</text>
+    ${champion?`<text x="340" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#b8820a">🏆 ${champion}</text>`:''}
+    ${r3n.map((n,i)=>`<text x="256" y="${(champion?120:108)+i*18}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+
+    <!-- 결승 ← 준결승 화살표 -->
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+        <path d="M2 9L8 5L2 1" fill="none" stroke="#b8820a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <path d="M174 256 L174 220 L340 220 L340 190" fill="none" stroke="#b8820a" stroke-width="0.9" stroke-opacity=".55" marker-end="url(#arr)"/>
+    <path d="M506 256 L506 220 L340 220" fill="none" stroke="#b8820a" stroke-width="0.9" stroke-opacity=".55"/>
+
+    <!-- 준결승 -->
+    <text x="340" y="250" text-anchor="middle" font-size="10" fill="#8a7a60" letter-spacing="1">준결승</text>
+    <line x1="20" y1="254" x2="660" y2="254" stroke="#d4c4a0" stroke-width="0.6" opacity=".6"/>
+
+    <!-- 준결승 1탁 -->
+    <rect x="72" y="260" width="204" height="120" rx="5" fill="#fdf5f3" stroke="#c0392b" stroke-width="1" stroke-opacity=".7"/>
+    <rect x="72" y="260" width="204" height="24" rx="5" fill="#faddd8" fill-opacity=".5"/>
+    <text x="174" y="276" text-anchor="middle" font-size="11" font-weight="700" fill="#a03020" letter-spacing="1">준결승 1탁</text>
+    ${r2n0.map((n,i)=>`<text x="90" y="${294+i*20}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+
+    <!-- 준결승 2탁 -->
+    <rect x="404" y="260" width="204" height="120" rx="5" fill="#fdf5f3" stroke="#c0392b" stroke-width="1" stroke-opacity=".7"/>
+    <rect x="404" y="260" width="204" height="24" rx="5" fill="#faddd8" fill-opacity=".5"/>
+    <text x="506" y="276" text-anchor="middle" font-size="11" font-weight="700" fill="#a03020" letter-spacing="1">준결승 2탁</text>
+    ${r2n1.map((n,i)=>`<text x="422" y="${294+i*20}" font-size="11" fill="${nameColor(n)}" font-weight="${isPlaceholder(n)?400:600}">${n}</text>`).join('')}
+
+    <!-- 16강 ← 준결승 연결 -->
+    <line x1="95"  y1="454" x2="95"  y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
+    <line x1="258" y1="454" x2="258" y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
+    <line x1="421" y1="454" x2="421" y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
+    <line x1="584" y1="454" x2="584" y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
+    <line x1="95"  y1="410" x2="584" y2="410" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5"/>
+    <line x1="174" y1="410" x2="174" y2="380" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5" marker-end="url(#arr)"/>
+    <line x1="506" y1="410" x2="506" y2="380" stroke="#b8820a" stroke-width="0.8" stroke-opacity=".5" marker-end="url(#arr)"/>
+
+    <!-- 16강 -->
+    <text x="340" y="447" text-anchor="middle" font-size="10" fill="#8a7a60" letter-spacing="2">16강 · 2판 합산</text>
+    <line x1="20" y1="452" x2="659" y2="452" stroke="#d4c4a0" stroke-width="0.6" opacity=".6"/>
+
+    ${[0,1,2,3].map(ti=>{
+      const x=[20,183,346,509][ti], cx=[95,258,421,584][ti];
+      const players=tour.r1[ti].players;
+      const scores=st.scores.r1[ti]||[];
+      const totals=players.map((_,pi)=>{const g1=parseFloat(scores[pi]?.g1)||0,g2=parseFloat(scores[pi]?.g2)||0;return scores[pi]?.g1!==''||scores[pi]?.g2!==''?g1+g2:null;});
+      const ranks=totals.some(t=>t!==null)?computeRanks(totals):players.map(()=>null);
+      const rankColors=['#b8820a','#5090c8','#a06840','#8a7a60'];
+      return `
+      <rect x="${x}" y="458" width="150" height="140" rx="5" fill="#fffdf7" stroke="#b8820a" stroke-width="0.9" stroke-opacity=".6"/>
+      <rect x="${x}" y="458" width="150" height="22" rx="5" fill="#f5e8b0" fill-opacity=".5"/>
+      <text x="${cx}" y="473" text-anchor="middle" font-size="10" font-weight="700" fill="#8a6008" letter-spacing="1">16강 ${ti+1}탁</text>
+      ${players.map((name,pi)=>{
+        const r=ranks[pi];
+        const tot=totals[pi];
+        const rankDot=r?`<circle cx="${x+142}" cy="${482+pi*22}" r="5" fill="${rankColors[r-1]}" opacity=".7"/>
+          <text x="${x+142}" y="${485+pi*22}" text-anchor="middle" font-size="7" font-weight="700" fill="#fff">${r}</text>`:'';
+        const totTxt=tot!==null?`<text x="${x+108}" y="${485+pi*22}" text-anchor="end" font-size="9" fill="#8a6008" font-weight="700">${tot}</text>`:'';
+        return `<text x="${x+10}" y="${485+pi*22}" font-size="11.5" fill="#2a2018" font-weight="600">${name}</text>${totTxt}${rankDot}`;
+      }).join('')}`;
+    }).join('')}
+
+    <!-- 범례 -->
+    <circle cx="26" cy="604" r="5" fill="#b8820a" opacity=".7"/>
+    <text x="36" y="608" font-size="9" fill="#8a7a60">1위</text>
+    <circle cx="56" cy="604" r="5" fill="#5090c8" opacity=".7"/>
+    <text x="66" y="608" font-size="9" fill="#8a7a60">2위</text>
+    <circle cx="86" cy="604" r="5" fill="#a06840" opacity=".7"/>
+    <text x="96" y="608" font-size="9" fill="#8a7a60">3위</text>
+    <text x="200" y="608" font-size="9" fill="#8a7a60">각 탁 1·2위 준결승 진출 (교차 배정)</text>
+  </svg>`;
+}
+
+initState();
+render();
+renderSvg();
+</script>
+</body>
+</html>
