@@ -429,7 +429,7 @@ async function addBet(){
       if(error) throw error;
       flash(`${name} → ${pick} ${amt}P 등록`);
     }
-    document.getElementById('inName').value='';
+    document.getElementById('inPick').value='';
     document.getElementById('inAmt').value='100';
     await loadFromDB(); render();
   }catch(e){ flash('등록 실패: '+e.message,true); }
