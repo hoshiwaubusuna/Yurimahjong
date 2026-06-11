@@ -540,7 +540,7 @@ function calcPayout(b){
   const m=multFor(b.pick); if(!m) return 0;
   const pbh=poolByHorse(), horse=pbh[b.pick]; if(!horse) return 0;
   const sp=settlePool(); if(!sp) return 0;
-  return Math.floor((b.amt/horse)*(horse*m/sp)*totalPool());
+  return Math.round((b.amt/horse)*(horse*m/sp)*totalPool());
 }
 function usedBy(name){ return bets.filter(b=>b.bettor===name).reduce((s,b)=>s+b.amt,0); }
 function highlightCard(pick){
