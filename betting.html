@@ -598,7 +598,7 @@ function renderBanner(){
   el.classList.add('show');
   el.innerHTML=`
     <div style="font-size:11px;letter-spacing:.3em;color:var(--muted);margin-bottom:8px">결과 확정</div>
-    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap">
+    <div style="display:flex;justify-content:center;align-items:center;gap:28px;flex-wrap:wrap">
       <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🥇 우승</div><div class="rname">${esc(results.r1)}</div></div>
       <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">🥈 준우승</div><div class="rname" style="font-size:clamp(16px,3vw,28px);color:#5090c8">${esc(results.r2)}</div></div>
     </div>
