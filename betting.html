@@ -642,8 +642,8 @@ function renderGrid(){
     }
 
     const card=document.createElement('div');
-    const isShining=!results && o!==null && o>=20 && o<50;
-    const isBlazing=!results && o!==null && o>=50;
+    const isShining=!results && o!==null && o>=16 && o<32;
+    const isBlazing=!results && o!==null && o>=16;
     card.className=`hcard ${rankCls} ${pp>0?'has-bet':''} ${closed?'locked':''} ${isBlazing?'blazing':isShining?'shining':''}`.trim();
     card.dataset.name=p;
     if(bgStyle) card.style.cssText=bgStyle;
