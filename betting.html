@@ -703,7 +703,7 @@ function renderList(){
       <td>${pickCells}</td>
       <td style="color:var(--gold-dark);vertical-align:top">${totalAmt.toLocaleString()}P</td>
       <td style="vertical-align:top">${badge}</td>
-      <td class="tdp" style="vertical-align:top">${results?totalPay.toLocaleString()+'P':'—'}</td>
+      <td class="tdp" style="vertical-align:top">${results?totalPay.toLocaleString()+'P':  ('+((totalPay*5).toLocaleString())+'원)':'—'}</td>
     </tr>`;
   }).join('');
 
