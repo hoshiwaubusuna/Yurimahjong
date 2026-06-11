@@ -535,12 +535,53 @@ function settlePool(){
   return PLAYERS.reduce((s,p)=>{ const m=multFor(p); return s+(m?pbh[p]*m:0); },0);
 }
 function oddsFor(pick){ const t=totalPool(),pp=poolByHorse()[pick]; if(!pp||!t) return null; return t/pp; }
+// 전체 정산 결과를 캐싱 (오차 보정 포함)
+let _payoutCache=null, _payoutResultKey=null;
+
+function getPayouts(){
+  if(!results) return {};
+  const key=JSON.stringify(results)+bets.map(b=>b.id+b.amt).join();
+  if(_payoutCache && _payoutResultKey===key) return _payoutCache;
+
+  const sp=settlePool(); const total=totalPool();
+  if(!sp){ _payoutCache={}; _payoutResultKey=key; return {}; }
+
+  const pbh=poolByHorse();
+  // 각 베팅의 정확한 몫 계산 (floor)
+  const pays={};
+  let distributed=0;
+  let firstHitId=null;
+
+  bets.forEach(b=>{
+    const m=multFor(b.pick);
+    if(!m){ pays[b.id]=0; return; }
+    const horse=pbh[b.pick]; if(!horse){ pays[b.id]=0; return; }
+    const exact=(b.amt/horse)*(horse*m/sp)*total;
+    pays[b.id]=Math.floor(exact);
+    distributed+=pays[b.id];
+    if(!firstHitId) firstHitId=b.id;
+  });
+
+  // 나머지 포인트를 정산액 최고자에게 (동점이면 균등 분배)
+  const remainder=total-distributed;
+  if(remainder>0){
+    const maxPay=Math.max(...Object.values(pays));
+    const topIds=bets.filter(b=>pays[b.id]===maxPay&&maxPay>0).map(b=>b.id);
+    if(topIds.length>0){
+      const each=Math.floor(remainder/topIds.length);
+      const leftover=remainder-each*topIds.length;
+      topIds.forEach(id=>{ pays[id]+=each; });
+      // 1P 미만 나머지는 첫 번째에게
+      if(leftover>0) pays[topIds[0]]+=leftover;
+    }
+  }
+
+  _payoutCache=pays; _payoutResultKey=key;
+  return pays;
+}
+
 function calcPayout(b){
-  if(!results) return 0;
-  const m=multFor(b.pick); if(!m) return 0;
-  const pbh=poolByHorse(), horse=pbh[b.pick]; if(!horse) return 0;
-  const sp=settlePool(); if(!sp) return 0;
-  return Math.round((b.amt/horse)*(horse*m/sp)*totalPool());
+  return getPayouts()[b.id]||0;
 }
 function usedBy(name){ return bets.filter(b=>b.bettor===name).reduce((s,b)=>s+b.amt,0); }
 function highlightCard(pick){
@@ -683,9 +724,22 @@ function renderList(){
   const byBettor={};
   bets.forEach(b=>{ if(!byBettor[b.bettor]) byBettor[b.bettor]=[]; byBettor[b.bettor].push(b); });
 
+  // 잔여 포인트 계산 — 최고 정산자에게 추가
+  let topBettor=null, topPay=0, residual=0;
+  if(results){
+    const distributed=bets.reduce((s,b)=>s+calcPayout(b),0);
+    residual=totalPool()-distributed;
+    Object.entries(byBettor).forEach(([name,bs])=>{
+      const pay=bs.reduce((s,b)=>s+calcPayout(b),0);
+      if(pay>topPay){ topPay=pay; topBettor=name; }
+    });
+  }
+
   const rows=Object.entries(byBettor).map(([name,bs],pi)=>{
     const totalAmt=bs.reduce((s,b)=>s+b.amt,0);
-    const totalPay=bs.reduce((s,b)=>s+calcPayout(b),0);
+    const rawPay=bs.reduce((s,b)=>s+calcPayout(b),0);
+    const bonus=(results&&name===topBettor&&residual>0)?residual:0;
+    const totalPay=rawPay+bonus;
     const anyHit=results&&bs.some(b=>calcPayout(b)>0);
     const pickCells=bs.map((b,i)=>{
       const pay=calcPayout(b),m=results?multFor(b.pick):null,isHit=pay>0;
@@ -705,7 +759,9 @@ function renderList(){
       <td style="color:var(--gold-dark);vertical-align:top">${totalAmt.toLocaleString()}P</td>
       <td style="vertical-align:top">${badge}</td>
       <td class="tdp" style="vertical-align:top">${results
-        ? totalPay.toLocaleString()+'P'+(totalPay>0?`<br><span style="font-size:11px;color:var(--green);font-weight:700">${(totalPay*5).toLocaleString()}원</span>`:'')
+        ? totalPay.toLocaleString()+'P'
+          +(bonus>0?`<span style="font-size:10px;color:var(--muted)"> (+${bonus}잔여)</span>`:'')
+          +(totalPay>0?`<br><span style="font-size:11px;color:var(--green);font-weight:700">${(totalPay*5).toLocaleString()}원</span>`:'')
         : '—'}</td>
     </tr>`;
   }).join('');
