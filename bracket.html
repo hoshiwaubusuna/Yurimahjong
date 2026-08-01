@@ -568,32 +568,60 @@ function renderSvg(){
   const advsR2 = st.advancers?.r2 || [[],[]];
   const advsR3 = st.advancers?.r3 || [[]];
 
-  // 16강 각 탁 1·2위 이름 구하기
+  // 16강 각 탁 1·2위 이름 구하기 (부분 점수도 반영)
   function getR1TopTwo(ti){
     const players = tour.r1[ti].players;
     const scores = st.scores.r1[ti] || [];
     const totals = players.map((_,pi)=>{
-      const g1=parseFloat(scores[pi]?.g1)||0, g2=parseFloat(scores[pi]?.g2)||0;
-      return scores[pi]?.g1!==''||scores[pi]?.g2!=='' ? g1+g2 : null;
+      const g1=parseFloat(scores[pi]?.g1), g2=parseFloat(scores[pi]?.g2);
+      const v1=isNaN(g1)?0:g1, v2=isNaN(g2)?0:g2;
+      return (scores[pi]?.g1!==''||scores[pi]?.g2!=='') ? v1+v2 : null;
     });
-    if(totals.every(t=>t===null)) return ['—','—'];
-    const ranked=[...players.map((n,i)=>({n,t:totals[i]}))].sort((a,b)=>(b.t??-Infinity)-(a.t??-Infinity));
-    return [ranked[0]?.n||'—', ranked[1]?.n||'—'];
+    if(totals.every(t=>t===null)) return [null, null];
+    const ranked=[...players.map((n,i)=>({n,t:totals[i]??-Infinity}))].sort((a,b)=>b.t-a.t);
+    return [ranked[0]?.n||null, ranked[1]?.n||null];
   }
 
-  // 준결승 표시할 이름 (배정됐으면 실제 이름, 아니면 설명)
+  // 준결승 표시할 이름 — 드래그 배정 우선, 없으면 점수로 자동 계산
   function r2Names(ti){
     const adv = advsR2[ti]||[];
     if(adv.length===4 && adv.every(Boolean)) return adv;
-    // 배정 전: 설명 텍스트
-    return ti===0
-      ? ['16강 1탁 1위','16강 2탁 2위','16강 3탁 1위','16강 4탁 2위']
-      : ['16강 1탁 2위','16강 2탁 1위','16강 3탁 2위','16강 4탁 1위'];
+
+    // 교차 배정 규칙: 준결1=[1탁1위,2탁2위,3탁1위,4탁2위], 준결2=[1탁2위,2탁1위,3탁2위,4탁1위]
+    const order = ti===0
+      ? [[0,0],[1,1],[2,0],[3,1]]
+      : [[0,1],[1,0],[2,1],[3,0]];
+
+    return order.map(([tIdx,rankIdx])=>{
+      const top = getR1TopTwo(tIdx);
+      const name = top[rankIdx];
+      const rankLabel = rankIdx===0 ? '1위' : '2위';
+      if(name) return `16강 ${tIdx+1}탁 ${rankLabel} (${name})`;
+      return `16강 ${tIdx+1}탁 ${rankLabel}`;
+    });
   }
+
   function r3Names(){
     const adv = advsR3[0]||[];
     if(adv.length===4&&adv.every(Boolean)) return adv;
-    return ['준결승 1탁 1위','준결승 1탁 2위','준결승 2탁 1위','준결승 2탁 2위'];
+
+    const result = [];
+    for(let ti=0;ti<2;ti++){
+      const players = r2Names(ti); // 이미 이름이 반영된 배열
+      const scores = st.scores.r2[ti]||[];
+      const adv2 = advsR2[ti]||[];
+      const realPlayers = adv2.length===4&&adv2.every(Boolean) ? adv2 : null;
+      if(realPlayers){
+        const totals = realPlayers.map((_,pi)=>scores[pi]?.g1!==''?parseFloat(scores[pi]?.g1)||0:null);
+        const ranked = realPlayers.map((n,i)=>({n,t:totals[i]??-Infinity})).sort((a,b)=>b.t-a.t);
+        result.push(ranked[0]?.t!==-Infinity ? `준결승 ${ti+1}탁 1위 (${ranked[0].n})` : `준결승 ${ti+1}탁 1위`);
+        result.push(ranked[1]?.t!==-Infinity ? `준결승 ${ti+1}탁 2위 (${ranked[1].n})` : `준결승 ${ti+1}탁 2위`);
+      } else {
+        result.push(`준결승 ${ti+1}탁 1위`);
+        result.push(`준결승 ${ti+1}탁 2위`);
+      }
+    }
+    return result;
   }
 
   // 우승자
