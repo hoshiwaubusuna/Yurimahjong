@@ -253,8 +253,10 @@ async function resetTournament(){
   render();
 }
 
-// 폴링 (30초마다 자동 갱신)
+// 폴링 (30초마다 자동 갱신) — 입력 중엔 건너뜀
 setInterval(async()=>{
+  const active=document.activeElement;
+  if(active && (active.tagName==='INPUT'||active.tagName==='TEXTAREA')) return;
   await loadFromDB();
   render();
 },30000);
@@ -361,7 +363,7 @@ function renderRounds(){
       const in2=makeScoreInput(scores[pi]?.g2||'', v=>{ st.scores.r1[ti][pi].g2=v; renderRounds(); });
       row.children[2].appendChild(in2);
       // 합산
-      row.children[3].textContent=totals[pi]!==null?parseFloat(totals[pi].toFixed(1)):'';
+      row.children[3].textContent=totals[pi]!==null?totals[pi]:'';
       row.children[3].className='total-cell';
       // 순위
       const r=ranks[pi];
@@ -519,12 +521,12 @@ function makeScoreInput(val, onChange){
   inp.value=val;
   inp.placeholder='0';
   inp.style.cssText+=';-moz-appearance:textfield;';
-  // blur(포커스 잃을 때)에만 반영 — 입력 중 재렌더 방지
   inp.addEventListener('blur',e=>{
     const v=e.target.value.trim();
     onChange(v);
+    // 자동 저장
+    saveData();
   });
-  // Enter로도 확정
   inp.addEventListener('keydown',e=>{
     if(e.key==='Enter') inp.blur();
   });
