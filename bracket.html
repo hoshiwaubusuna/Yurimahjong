@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>麻雀大会 · 대진표</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -109,6 +110,11 @@ header{text-align:center;margin-bottom:28px;}
 </head>
 <body>
 <canvas id="tileCanvas"></canvas>
+<div id="loadingOverlay" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(245,240,232,.8);backdrop-filter:blur(3px);align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="font-family:'Noto Serif JP',serif;font-size:28px;color:var(--gold-dark);animation:spin 1.2s linear infinite">🀄</div>
+  <div style="font-size:13px;color:var(--muted);letter-spacing:.1em">잠시만요...</div>
+</div>
+<style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
 
 <a class="home-btn" href="index.html">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -207,34 +213,68 @@ let state = {};
 let curTour = TOURNAMENTS[0].id;
 let dragName = null;
 
-const KEY = 'mahjong_bracket_v1';
+/* ══ Supabase ══ */
+const SB_URL='https://dvfgtmxrxpnhufeffqez.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2Zmd0bXhyeHBuaHVmZWZmcWV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDA5MzEsImV4cCI6MjA5NjYxNjkzMX0.hCY_GJbVs-iuwSeOXMluTE6lIHYscDfKCv2ro1ALdsw';
+const {createClient}=supabase;
+const sb=createClient(SB_URL,SB_KEY);
 
-function initState(){
-  try{ const d=JSON.parse(localStorage.getItem(KEY)||'{}'); state=d; }catch(e){ state={}; }
+function setLoading(on){
+  const el=document.getElementById('loadingOverlay');
+  if(el) el.style.display=on?'flex':'none';
+}
+
+async function loadFromDB(){
+  try{
+    const {data,error}=await sb.from('bracket_data').select('data').eq('id',1).single();
+    if(error) throw error;
+    if(data?.data && Object.keys(data.data).length>0){
+      state=data.data;
+    }
+    ensureState();
+  }catch(e){ console.error('load error',e); ensureState(); }
+}
+
+async function saveData(){
+  setLoading(true);
+  try{
+    const {error}=await sb.from('bracket_data').update({data:state,updated_at:new Date().toISOString()}).eq('id',1);
+    if(error) throw error;
+    flash('저장됐어!');
+  }catch(e){ flash('저장 실패: '+e.message,true); }
+  setLoading(false);
+}
+
+async function resetTournament(){
+  if(!confirm('이 대회 데이터를 초기화할까요?')) return;
+  state[curTour]={scores:{r1:[],r2:[],r3:[]},advancers:{r2:[[],[]],r3:[[]]}};
+  ensureState();
+  await saveData();
+  render();
+}
+
+// 폴링 (30초마다 자동 갱신)
+setInterval(async()=>{
+  await loadFromDB();
+  render();
+},30000);
+
+const KEY='mahjong_bracket_v1';
+
+function ensureState(){
   TOURNAMENTS.forEach(t=>{
-    if(!state[t.id]) state[t.id]={ scores:{r1:[],r2:[],r3:[]}, advancers:{r2:[[],[]],r3:[[]]} };
-    // r1 점수 초기화
-    t.r1.forEach((_,ti)=>{
-      if(!state[t.id].scores.r1[ti]) state[t.id].scores.r1[ti]=Array(4).fill(null).map(()=>({g1:'',g2:''}));
-    });
-    t.r2.forEach((_,ti)=>{
-      if(!state[t.id].scores.r2[ti]) state[t.id].scores.r2[ti]=Array(4).fill(null).map(()=>({g1:''}));
-    });
-    t.r3.forEach((_,ti)=>{
-      if(!state[t.id].scores.r3[ti]) state[t.id].scores.r3[ti]=Array(4).fill(null).map(()=>({g1:''}));
-    });
+    if(!state[t.id]) state[t.id]={scores:{r1:[],r2:[],r3:[]},advancers:{r2:[[],[]],r3:[[]]}};
+    t.r1.forEach((_,ti)=>{ if(!state[t.id].scores.r1[ti]) state[t.id].scores.r1[ti]=Array(4).fill(null).map(()=>({g1:'',g2:''})); });
+    t.r2.forEach((_,ti)=>{ if(!state[t.id].scores.r2[ti]) state[t.id].scores.r2[ti]=Array(4).fill(null).map(()=>({g1:''})); });
+    t.r3.forEach((_,ti)=>{ if(!state[t.id].scores.r3[ti]) state[t.id].scores.r3[ti]=Array(4).fill(null).map(()=>({g1:''})); });
     if(!state[t.id].advancers) state[t.id].advancers={r2:[[],[]],r3:[[]]};
   });
 }
 
-function saveData(){
-  try{ localStorage.setItem(KEY,JSON.stringify(state)); flash('저장됐어!'); }catch(e){ flash('저장 실패',true); }
-}
-function resetTournament(){
-  if(!confirm('이 대회 데이터를 초기화할까요?')) return;
-  const t=TOURNAMENTS.find(x=>x.id===curTour);
-  state[curTour]={ scores:{r1:[],r2:[],r3:[]}, advancers:{r2:[[],[]],r3:[[]]} };
-  initState(); render();
+function initState(){
+  // localStorage 백업에서 초기 로드 (Supabase 로드 전 임시)
+  try{ const d=JSON.parse(localStorage.getItem(KEY)||'{}'); if(Object.keys(d).length>0) state=d; }catch(e){}
+  ensureState();
 }
 
 /* ══ 순위 계산 ══ */
@@ -665,8 +705,13 @@ function renderSvg(){
 }
 
 initState();
-render();
-renderSvg();
+(async()=>{
+  setLoading(true);
+  await loadFromDB();
+  render();
+  renderSvg();
+  setLoading(false);
+})();
 </script>
 </body>
 </html>
