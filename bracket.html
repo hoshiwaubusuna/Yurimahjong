@@ -422,6 +422,17 @@ function renderRounds(){
           badge.className='adv-badge adv-f'; badge.textContent='결승';
           nameSpan.appendChild(badge);
         }
+        // × 취소 버튼
+        const removeBtn=document.createElement('span');
+        removeBtn.textContent='×';
+        removeBtn.style.cssText='margin-left:5px;cursor:pointer;color:var(--muted);font-size:11px;opacity:.6;';
+        removeBtn.onclick=()=>{
+          st.advancers.r2[ti][pi]=null;
+          // 해당 슬롯 점수도 초기화
+          if(st.scores.r2[ti][pi]) st.scores.r2[ti][pi]={g1:''};
+          saveData(); renderRounds(); renderSvg();
+        };
+        nameSpan.appendChild(removeBtn);
         const inp=makeScoreInput(scores[pi]?.g1||'', v=>{ if(!st.scores.r2[ti][pi]) st.scores.r2[ti][pi]={g1:''}; st.scores.r2[ti][pi].g1=v; renderRounds(); });
         row.children[1].appendChild(inp);
       } else {
@@ -470,6 +481,16 @@ function renderRounds(){
     const ns=row.children[0];
     if(name){
       ns.textContent=name;
+      // × 취소 버튼
+      const removeBtn=document.createElement('span');
+      removeBtn.textContent='×';
+      removeBtn.style.cssText='margin-left:5px;cursor:pointer;color:var(--muted);font-size:11px;opacity:.6;';
+      removeBtn.onclick=()=>{
+        st.advancers.r3[0][pi]=null;
+        if(st.scores.r3[0][pi]) st.scores.r3[0][pi]={g1:''};
+        saveData(); renderRounds(); renderSvg();
+      };
+      ns.appendChild(removeBtn);
       const inp=makeScoreInput(fscores[pi]?.g1||'', v=>{ if(!st.scores.r3[0][pi]) st.scores.r3[0][pi]={g1:''}; st.scores.r3[0][pi].g1=v; renderRounds(); });
       row.children[1].appendChild(inp);
     } else {
