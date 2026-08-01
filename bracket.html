@@ -179,7 +179,7 @@ header{text-align:center;margin-bottom:28px;}
 const TOURNAMENTS = [
   {
     id: '2026',
-    label: '2026 백합마작대회 개인전',
+    label: '2026 백합마작대회',
     // 16강
     r1: [
       { name:'16강 1탁', players:['스피리아','원쁠원','오랑시','아린켄'], cond:'2판 합산 · 1·2위 진출' },
@@ -239,9 +239,9 @@ function resetTournament(){
 
 /* ══ 순위 계산 ══ */
 function computeRanks(scores){
-  const valid=scores.map((s,i)=>({s,i})).filter(x=>x.s!==null&&x.s!=='');
+  const valid=scores.map((s,i)=>({s:parseFloat(s),i})).filter(x=>!isNaN(x.s)&&x.s!==null&&String(scores[x.i])!=='');
   if(!valid.length) return scores.map(()=>null);
-  valid.sort((a,b)=>Number(b.s)-Number(a.s));
+  valid.sort((a,b)=>b.s-a.s);
   const ranks=scores.map(()=>null);
   let rank=1;
   for(let i=0;i<valid.length;i++){
@@ -473,9 +473,21 @@ function makePlayerRow(isHeader){
 }
 function makeScoreInput(val, onChange){
   const inp=document.createElement('input');
-  inp.className='score-in'; inp.type='number'; inp.value=val; inp.placeholder='0';
-  inp.addEventListener('input',e=>onChange(e.target.value));
-  inp.addEventListener('wheel',()=>inp.blur());
+  inp.className='score-in';
+  inp.type='text';
+  inp.inputMode='decimal';
+  inp.value=val;
+  inp.placeholder='0';
+  inp.style.cssText+=';-moz-appearance:textfield;';
+  // blur(포커스 잃을 때)에만 반영 — 입력 중 재렌더 방지
+  inp.addEventListener('blur',e=>{
+    const v=e.target.value.trim();
+    onChange(v);
+  });
+  // Enter로도 확정
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter') inp.blur();
+  });
   return inp;
 }
 function makeChip(name){
