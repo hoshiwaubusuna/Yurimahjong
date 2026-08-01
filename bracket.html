@@ -127,17 +127,17 @@ header{text-align:center;margin-bottom:28px;}
 
   <!-- 뷰 탭 -->
   <div class="view-tabs">
-    <button class="view-tab active" id="tabSvg" onclick="switchView('svg')">대진표</button>
-    <button class="view-tab" id="tabRecords" onclick="switchView('records')">결과 기록</button>
+    <button class="view-tab" id="tabSvg" onclick="switchView('svg')">대진표</button>
+    <button class="view-tab active" id="tabRecords" onclick="switchView('records')">결과 기록</button>
   </div>
 
   <!-- 대진표 SVG 패널 -->
-  <div class="view-panel active" id="panelSvg">
+  <div class="view-panel" id="panelSvg">
     <div class="svg-wrap" id="svgWrap"></div>
   </div>
 
   <!-- 결과 기록 패널 -->
-  <div class="view-panel" id="panelRecords">
+  <div class="view-panel active" id="panelRecords">
     <div class="save-row">
       <span class="flash" id="flashMsg"></span>
       <button class="btn btn-gold" onclick="saveData()">저장</button>
@@ -508,7 +508,7 @@ function flash(msg,err=false){
 }
 
 /* ══ 뷰 탭 전환 ══ */
-let curView = 'svg';
+let curView = 'records';
 function switchView(v){
   curView = v;
   document.getElementById('tabSvg').classList.toggle('active', v==='svg');
