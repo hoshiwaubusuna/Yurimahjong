@@ -715,7 +715,7 @@ function renderSvg(){
       const rows=players.map((name,pi)=>{
         const r=ranks[pi], tot=totals[pi];
         const rankBadge=r?`<span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${rankColors[r-1]};color:#fff;font-size:8px;font-weight:700;line-height:16px;text-align:center;flex-shrink:0">${r}</span>`:'<span style="width:16px;flex-shrink:0"></span>';
-        const totSpan=tot!==null?`<span style="font-size:9px;color:#8a6008;font-weight:700;flex-shrink:0">${tot}</span>`:'';
+        const totSpan=tot!==null?`<span style="font-size:9px;color:#8a6008;font-weight:700;flex-shrink:0">${parseFloat(tot.toFixed(1))}</span>`:'';
         return `<div style="display:flex;align-items:center;gap:4px;padding:3px 6px;border-bottom:1px solid rgba(0,0,0,.05);">
           <span style="flex:1;font-size:11px;font-weight:600;color:#2a2018;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
           ${totSpan}${rankBadge}
